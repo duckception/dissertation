@@ -387,7 +387,7 @@
     "no-whitespace-before-property": "error",
     "no-with": "error",
     "object-curly-spacing": [
-      "error",
+      "off",
       "never"
     ],
     "object-property-newline": [
