@@ -9,6 +9,7 @@
     "clean:contracts": "rimraf build",
     "compile": "waffle waffle-solcjs.json && yarn typechain",
     "compile:native": "waffle waffle-native.json && yarn typechain",
+    "docs": "java -jar ./docs/plantuml.jar ./docs/*.puml",
     "lint": "yarn lint:ts && yarn lint:sol",
     "lint:fix": "yarn lint:ts --fix && yarn lint:sol --fix",
     "lint:sol": "solhint 'contracts/**/*.sol'",

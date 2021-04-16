@@ -1,0 +1,77 @@
+@startuml
+title Duck Express - the app lifecycle (late delivery)
+
+participant "Addressee" as addressee
+participant "Customer" as customer
+participant "Contract" as contract
+participant "Courier" as courier
+
+customer -> contract: Create a delivery order
+activate contract
+contract -> contract: Transfer reward tokens from the <b>Customer</b> to the <b>Contract</b>
+contract -> customer: Get order's hash (identification purpose)
+deactivate
+
+courier -> contract: Browse all available delivery orders
+activate contract
+return
+
+courier -> contract: Accept a delivery order
+activate contract
+contract -> contract: Transfer collateral tokens from the <b>Courier</b> to the <b>Contract</b>
+return
+
+courier -> customer: Pick up the delivery goods
+activate customer
+customer -> contract: Confirm pick up
+activate contract
+return
+return
+
+alt Customer claims the collateral
+  customer -> contract: Claim collateral
+  activate contract
+  contract -> contract: Transfer back reward tokens from the <b>Contract</b> to the <b>Customer</b>
+  contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Customer</b>
+  return
+else Customer allows the courier to deliver the late goods
+  alt Addressee accepts the late delivery
+    courier -> addressee: Deliver the goods
+    activate addressee
+    addressee -> contract: Confirm delivery
+    activate contract
+    contract -> contract: Transfer 50% of reward tokens from the <b>Contract</b> to the <b>Courier</b>
+    contract -> contract: Transfer 50% of reward tokens from the <b>Contract</b> to the <b>Customer</b>
+    contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Courier</b>
+    return
+    return
+  else Addressee refuses to receive the delivery
+    courier -> addressee: Deliver the goods
+    activate addressee
+    addressee -> contract: Refuse to receive the delivery
+    activate contract
+    return
+    return
+
+    courier -> customer: Deliver the goods back
+    activate customer
+    alt Customer accepts the returned goods
+      customer -> contract: Accept the returned goods
+      activate contract
+      contract -> contract: Transfer 50% reward tokens from the <b>Contract</b> to the <b>Courier</b>
+      contract -> contract: Transfer 50% reward tokens from the <b>Contract</b> to the <b>Customer</b>
+      contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Courier</b>
+      return
+    else Customer refuses to receive the returned goods
+      customer -> contract: Refuse to receive the returned delivery
+      activate contract
+      contract -> contract: Transfer 50% back reward tokens from the <b>Contract</b> to the <b>Courier</b>
+      contract -> contract: Transfer 50% back reward tokens from the <b>Contract</b> to the <b>Customer</b>
+      contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Customer</b>
+      return
+    end
+    return
+  end
+end
+
+@enduml
