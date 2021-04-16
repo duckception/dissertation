@@ -9,93 +9,100 @@ participant "Courier" as courier
 customer -> contract: Create a delivery order
 activate contract
 contract -> contract: Transfer reward tokens from the <b>Customer</b> to the <b>Contract</b>
-contract -> customer: Get order's hash (identification purposes)
+contract -> customer: Get order's hash (identification purpose)
 deactivate
 
-courier -> contract: Browse available delivery orders
+courier -> contract: Browse all available delivery orders
 activate contract
 return
 
 courier -> contract: Accept a delivery order
 activate contract
-contract -> contract: Verify <b>Customer's</b> signature
 contract -> contract: Transfer collateral tokens from the <b>Courier</b> to the <b>Contract</b>
 return
 
-courier -> contract: Pick up the delivery goods
-activate contract
+courier -> customer: Pick up the delivery goods
+activate customer
 customer -> contract: Confirm pick up
-contract -> contract: Verify <b>Customer's</b> signature
+activate contract
+return
 return
 
 alt Addressee accepts the delivery
-  courier -> contract: Deliver the goods
-  activate contract
+  courier -> addressee: Deliver the goods
+  activate addressee
   addressee -> contract: Confirm delivery
-  contract -> contract: Verify <b>Addressee's</b> signature
+  activate contract
   contract -> contract: Transfer reward tokens from the <b>Contract</b> to the <b>Courier</b>
   contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Courier</b>
   return
+  return
 else Addressee refuses to receive the delivery
-  courier -> contract: Deliver the goods
-  activate contract
+  courier -> addressee: Deliver the goods
+  activate addressee
   addressee -> contract: Refuse to receive the delivery
-  contract -> contract: Verify <b>Addressee's</b> signature
+  activate contract
+  return
   return
 
-  courier -> contract: Deliver the goods back
-  activate contract
+  courier -> customer: Deliver the goods back
+  activate customer
   alt Customer accepts the returned goods
     customer -> contract: Accept the returned goods
-    contract -> contract: Verify <b>Customer's</b> signature
+    activate contract
     contract -> contract: Transfer reward tokens from the <b>Contract</b> to the <b>Courier</b>
     contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Courier</b>
+    return
   else Customer refuses to receive the returned goods
     customer -> contract: Refuse to receive the returned delivery
-    contract -> contract: Verify <b>Customer's</b> signature
+    activate contract
     contract -> contract: Transfer back reward tokens from the <b>Contract</b> to the <b>Customer</b>
     contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Customer</b>
+    return
   end
   return
 else Courier fails to deliver the package in given time frame
   alt Customer claims the collateral
     customer -> contract: Claim collateral
     activate contract
-    contract -> contract: Verify <b>Customer's</b> signature
     contract -> contract: Transfer back reward tokens from the <b>Contract</b> to the <b>Customer</b>
     contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Customer</b>
     return
-  else Customer lets the courier deliver the late goods
+  else Customer allows the courier to deliver the late goods
     alt Addressee accepts the late delivery
-      courier -> contract: Deliver the goods
-      activate contract
+      courier -> addressee: Deliver the goods
+      activate addressee
       addressee -> contract: Confirm delivery
-      contract -> contract: Verify <b>Addressee's</b> signature
+      activate contract
       contract -> contract: Transfer 50% of reward tokens from the <b>Contract</b> to the <b>Courier</b>
-      contract -> contract: Transfer back 50% of reward tokens from the <b>Contract</b> to the <b>Customer</b>
+      contract -> contract: Transfer 50% of reward tokens from the <b>Contract</b> to the <b>Customer</b>
       contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Courier</b>
       return
+      return
     else Addressee refuses to receive the delivery
-      courier -> contract: Deliver the goods
-      activate contract
+      courier -> addressee: Deliver the goods
+      activate addressee
       addressee -> contract: Refuse to receive the delivery
-      contract -> contract: Verify <b>Addressee's</b> signature
+      activate contract
+      return
       return
 
-      courier -> contract: Deliver the goods back
-      activate contract
+      courier -> customer: Deliver the goods back
+      activate customer
       alt Customer accepts the returned goods
         customer -> contract: Accept the returned goods
-        contract -> contract: Verify <b>Customer's</b> signature
-        contract -> contract: Transfer 50% of reward tokens from the <b>Contract</b> to the <b>Courier</b>
-        contract -> contract: Transfer back 50% of reward tokens from the <b>Contract</b> to the <b>Customer</b>
+        activate contract
+        contract -> contract: Transfer 50% reward tokens from the <b>Contract</b> to the <b>Courier</b>
+        contract -> contract: Transfer 50% reward tokens from the <b>Contract</b> to the <b>Customer</b>
         contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Courier</b>
+        return
       else Customer refuses to receive the returned goods
         customer -> contract: Refuse to receive the returned delivery
-        contract -> contract: Verify <b>Customer's</b> signature
-        contract -> contract: Transfer 50% of reward tokens from the <b>Contract</b> to the <b>Courier</b>
-        contract -> contract: Transfer back 50% of reward tokens from the <b>Contract</b> to the <b>Customer</b>
+        activate contract
+        contract -> contract: Transfer 50% back reward tokens from the <b>Contract</b> to the <b>Courier</b>
+        contract -> contract: Transfer 50% back reward tokens from the <b>Contract</b> to the <b>Customer</b>
         contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Customer</b>
+        return
       end
       return
     end
