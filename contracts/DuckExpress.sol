@@ -26,8 +26,8 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     event MinDeliveryTimeSet(uint256 indexed time);
     event TokenSupported(address indexed tokenAddress);
     event TokenSupportStopped(address indexed tokenAddress);
-    event DeliveryOfferCreated(address indexed customerAddress, bytes32 signatureHash);
-    event DeliveryOfferAccepted(address indexed courierAddress, bytes32 signatureHash);
+    event DeliveryOfferCreated(address indexed customerAddress, bytes32 offerHash);
+    event DeliveryOfferAccepted(address indexed courierAddress, bytes32 offerHash);
 
     // INITIALIZERS
 
@@ -70,11 +70,13 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     }
 
     function acceptDeliveryOffer(bytes32 offerHash) external {
-        require(isOfferAvailable(offerHash), "DuckExpress: the offer is not available");
+        require(isOfferAvailable(offerHash), "DuckExpress: the offer is unavailable");
 
         Offer memory offer = _offers[offerHash];
 
         IERC20(offer.tokenAddress).safeTransferFrom(msg.sender, address(this), offer.collateral);
+
+        _offerStatuses.set(offerHash, EnumerableMap.OfferStatus.UNAVAILABLE);
 
         _orders[offerHash] = Order({
             offer: offer,
@@ -150,14 +152,18 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         return _nonces[customer];
     }
 
-    function isOfferAvailable(bytes32 signatureHash) public view returns (bool) {
-        return _offerStatuses.contains(signatureHash) &&
-            _offerStatuses.get(signatureHash) == EnumerableMap.OfferStatus.AVAILABLE;
+    function isOfferAvailable(bytes32 offerHash) public view returns (bool) {
+        return _offerStatuses.contains(offerHash) &&
+            _offerStatuses.get(offerHash) == EnumerableMap.OfferStatus.AVAILABLE;
     }
 
-    function offer(bytes32 signatureHash) external view returns (Offer memory) {
-        require(isOfferAvailable(signatureHash), "DuckExpress: unavailable offer");
+    function offer(bytes32 offerHash) external view returns (Offer memory) {
+        require(isOfferAvailable(offerHash), "DuckExpress: unavailable offer");
 
-        return _offers[signatureHash];
+        return _offers[offerHash];
+    }
+
+    function order(bytes32 offerHash) external view returns (Order memory) {
+        return _orders[offerHash];
     }
 }
