@@ -31,12 +31,12 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
 
     // INITIALIZERS
 
-    constructor(address owner) {
-        __Ownable_init_unchained(owner);
+    constructor(address initialOwner) {
+        __Ownable_init_unchained(initialOwner);
     }
 
-    function initialize(address owner, uint256 minDeliveryTime) public initializer {
-        __Ownable_init_unchained(owner);
+    function initialize(address initialOwner, uint256 minDeliveryTime) public initializer {
+        __Ownable_init_unchained(initialOwner);
         __DuckExpress_init_unchained(minDeliveryTime);
     }
 
