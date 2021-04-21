@@ -7,7 +7,6 @@ import { deployProxy } from '../helpers/deployProxy'
 import { deployDuckExpress } from '../helpers/deployDuckExpress'
 
 describe('DuckExpress - Initializable behaviour', () => {
-  const stakingToken = randomAddress()
   const minDeliveryTime = 12 * 3600
 
   let DuckExpress: DuckExpress
