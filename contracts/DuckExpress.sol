@@ -50,6 +50,10 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     function createDeliveryOffer(Offer calldata offer) external {
         require(isTokenSupported(offer.tokenAddress), "DuckExpress: the ERC20 loan token is not supported");
         require(_nonces[msg.sender] == offer.nonce, "DuckExpress: incorrect nonce");
+        require(offer.customerAddress == msg.sender, "DuckExpress: customer address must be your address");
+        require(offer.addresseeAddress != address(0), "DuckExpress: addressee address cannot be zero address");
+        require(offer.pickupAddress != "", "DuckExpress: the pickup address must be set");
+        require(offer.deliveryAddress != "", "DuckExpress: the delivery address must be set");
         require(offer.deliveryTime >= _minDeliveryTime, "DuckExpress: the delivery time cannot be lesser than the minimal delivery time");
         require(offer.reward > 0, "DuckExpress: the reward must be greater than 0");
         require(offer.collateral > 0, "DuckExpress: the collateral must be greater than 0");
@@ -65,20 +69,21 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         emit DeliveryOfferCreated(msg.sender, offerHash);
     }
 
-    function acceptDeliveryOffer(address customerAddress, bytes32 signatureHash, Offer calldata offer) external {
-        require(isOfferAvailable(signatureHash), "DuckExpress: the offer is not available");
+    function acceptDeliveryOffer(bytes32 offerHash) external {
+        require(isOfferAvailable(offerHash), "DuckExpress: the offer is not available");
+
+        Offer memory offer = _offers[offerHash];
 
         IERC20(offer.tokenAddress).safeTransferFrom(msg.sender, address(this), offer.collateral);
 
-        _orders[signatureHash] = Order({
+        _orders[offerHash] = Order({
             offer: offer,
             status: OrderStatus.AWAITING_PICK_UP,
-            customerAddress: customerAddress,
             courierAddress: msg.sender,
             timestamp: block.timestamp
         });
 
-        emit DeliveryOfferAccepted(msg.sender, signatureHash);
+        emit DeliveryOfferAccepted(msg.sender, offerHash);
     }
 
     function hashOffer(Offer calldata offer) public view returns (bytes32) {

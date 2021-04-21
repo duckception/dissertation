@@ -18,7 +18,6 @@ abstract contract OrderModel is OfferModel {
     struct Order {
         Offer offer;
         OrderStatus status;
-        address customerAddress;
         address courierAddress;
         uint256 timestamp;
     }

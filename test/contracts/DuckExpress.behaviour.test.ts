@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { MockProvider, loadFixture } from 'ethereum-waffle'
-import { BigNumber, Wallet } from 'ethers'
+import { BigNumber, Wallet, utils } from 'ethers'
 import { DuckExpress, ERC20 } from '../../build'
 import { Offer } from '../../src/models/Offer'
 import { duckExpressFixture } from '../fixtures/duckExpressFixture'
@@ -19,22 +19,17 @@ describe.only('DuckExpress', () => {
   let asCourier: AsWalletFunction
 
   beforeEach(async () => {
-    ({
-      provider,
-      duckExpress,
-      token,
-      customer,
-      courier,
-      asCustomer,
-      asCourier,
-    } = await loadFixture(duckExpressFixture))
+    ;({ provider, duckExpress, token, customer, courier, asCustomer, asCourier } = await loadFixture(
+      duckExpressFixture,
+    ))
   })
-
   function getDefaultParams(): DeliveryOfferParams {
     return {
-      customer,
-      verifyingContractAddress: duckExpress.address,
       nonce: 0,
+      customerAddress: customer.address,
+      addresseeAddress: randomAddress(),
+      pickupAddress: 'Bulwarowa 20 Kraków 31-751',
+      deliveryAddress: 'Opatowska 48 Warszawa 01-622',
       deliveryTime: 12 * 3600,
       tokenAddress: token.address,
       reward: 1000,
@@ -43,9 +38,7 @@ describe.only('DuckExpress', () => {
   }
 
   async function prepareDuckExpress() {
-    await duckExpress.supportToken(
-      token.address,
-    )
+    await duckExpress.supportToken(token.address)
     await asCourier(token).approve(duckExpress.address, 10_000)
     await asCustomer(token).approve(duckExpress.address, 10_000)
   }
@@ -80,15 +73,15 @@ describe.only('DuckExpress', () => {
         }
 
         const params = await createDeliveryOfferParams(defaultParams)
-        await expect(duckExpress.createDeliveryOffer(...params)).to.be.revertedWith('DuckExpress: the ERC20 loan token is not supported')
+        await expect(duckExpress.createDeliveryOffer(...params)).to.be.revertedWith(
+          'DuckExpress: the ERC20 loan token is not supported',
+        )
       })
     })
 
-    describe('parameters validation (with already supported token)', () => {
+    describe.only('parameters validation (with already supported token)', () => {
       beforeEach(async () => {
-        await duckExpress.supportToken(
-          token.address,
-        )
+        await duckExpress.supportToken(token.address)
       })
 
       it('reverts for invalid nonce', async () => {
@@ -98,7 +91,43 @@ describe.only('DuckExpress', () => {
         }
 
         const params = await createDeliveryOfferParams(defaultParams)
-        await expect(duckExpress.createDeliveryOffer(...params)).to.be.revertedWith('DuckExpress: incorrect nonce')
+        await expect(asCustomer(duckExpress).createDeliveryOffer(...params)).to.be.revertedWith('DuckExpress: incorrect nonce')
+      })
+
+      it('reverts for invalid customer address', async () => {
+        defaultParams = {
+          ...defaultParams,
+          customerAddress: randomAddress(),
+        }
+
+        const params = await createDeliveryOfferParams(defaultParams)
+        await expect(asCustomer(duckExpress).createDeliveryOffer(...params)).to.be.revertedWith(
+          'DuckExpress: customer address must be your address',
+        )
+      })
+
+      it('reverts for empty pickup address', async () => {
+        defaultParams = {
+          ...defaultParams,
+          pickupAddress: '',
+        }
+
+        const params = await createDeliveryOfferParams(defaultParams)
+        await expect(asCustomer(duckExpress).createDeliveryOffer(...params)).to.be.revertedWith(
+          'DuckExpress: the pickup address must be set',
+        )
+      })
+
+      it('reverts for empty delivery address', async () => {
+        defaultParams = {
+          ...defaultParams,
+          deliveryAddress: '',
+        }
+
+        const params = await createDeliveryOfferParams(defaultParams)
+        await expect(asCustomer(duckExpress).createDeliveryOffer(...params)).to.be.revertedWith(
+          'DuckExpress: the delivery address must be set',
+        )
       })
 
       it('reverts for too small delivery time', async () => {
@@ -108,7 +137,9 @@ describe.only('DuckExpress', () => {
         }
 
         const params = await createDeliveryOfferParams(defaultParams)
-        await expect(duckExpress.createDeliveryOffer(...params)).to.be.revertedWith('DuckExpress: the delivery time cannot be lesser than the minimal delivery time')
+        await expect(asCustomer(duckExpress).createDeliveryOffer(...params)).to.be.revertedWith(
+          'DuckExpress: the delivery time cannot be lesser than the minimal delivery time',
+        )
       })
 
       it('reverts for too small reward', async () => {
@@ -118,7 +149,9 @@ describe.only('DuckExpress', () => {
         }
 
         const params = await createDeliveryOfferParams(defaultParams)
-        await expect(duckExpress.createDeliveryOffer(...params)).to.be.revertedWith('DuckExpress: the reward must be greater than 0')
+        await expect(asCustomer(duckExpress).createDeliveryOffer(...params)).to.be.revertedWith(
+          'DuckExpress: the reward must be greater than 0',
+        )
       })
 
       it('reverts for too small collateral', async () => {
@@ -128,7 +161,9 @@ describe.only('DuckExpress', () => {
         }
 
         const params = await createDeliveryOfferParams(defaultParams)
-        await expect(duckExpress.createDeliveryOffer(...params)).to.be.revertedWith('DuckExpress: the collateral must be greater than 0')
+        await expect(asCustomer(duckExpress).createDeliveryOffer(...params)).to.be.revertedWith(
+          'DuckExpress: the collateral must be greater than 0',
+        )
       })
     })
 
@@ -169,7 +204,7 @@ describe.only('DuckExpress', () => {
         expect(await duckExpress.offer(offerHash)).to.eq
       })
 
-      it('increments customer\'s nonce', async () => {
+      it("increments customer's nonce", async () => {
         const params = await createDeliveryOfferParams(defaultParams)
         await asCustomer(duckExpress).createDeliveryOffer(...params)
 
