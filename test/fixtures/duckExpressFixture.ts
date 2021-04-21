@@ -1,0 +1,22 @@
+import { Wallet } from 'ethers'
+import { MockProvider } from 'ethereum-waffle'
+import { deployDuckExpressBehindProxy } from '../helpers/deployDuckExpressBehindProxy'
+import { asWalletFactory } from '../helpers/asWalletFactory'
+import { erc20TokenFixture } from './erc20TokenFixture'
+
+export async function duckExpressFixture(wallets: Wallet[], provider: MockProvider) {
+  const [deployer, customer, courier] = wallets
+  const { token } = await erc20TokenFixture([customer, courier])
+  const duckExpress = await deployDuckExpressBehindProxy(deployer)
+
+  return {
+    provider,
+    deployer,
+    customer,
+    courier,
+    duckExpress,
+    token,
+    asCustomer: asWalletFactory(customer),
+    asCourier: asWalletFactory(courier),
+  }
+}
