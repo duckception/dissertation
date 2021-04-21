@@ -88,16 +88,21 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         emit DeliveryOfferAccepted(msg.sender, offerHash);
     }
 
-    function hashOffer(Offer calldata offer) public view returns (bytes32) {
+    function hashOffer(Offer calldata offer) public pure returns (bytes32) {
         return keccak256(abi.encode(
-            msg.sender,
             offer.nonce,
+            offer.customerAddress,
+            offer.addresseeAddress,
+            offer.pickupAddress,
+            offer.deliveryAddress,
             offer.deliveryTime,
             offer.tokenAddress,
             offer.reward,
             offer.collateral
         ));
     }
+
+    // cancel offer
 
     // accept delivery offer
 

@@ -1,4 +1,5 @@
 import { BigNumber, utils } from 'ethers'
+import { Offer } from '../../src/models/Offer'
 
 export interface DeliveryOfferParams {
   nonce: number,
@@ -13,7 +14,7 @@ export interface DeliveryOfferParams {
 }
 
 export async function createDeliveryOfferParams(params: DeliveryOfferParams) {
-  const parsedOffer = {
+  const parsedOffer: Offer = {
     nonce: BigNumber.from(params.nonce),
     customerAddress: params.customerAddress,
     addresseeAddress: params.addresseeAddress,

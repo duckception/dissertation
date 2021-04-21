@@ -2,7 +2,6 @@ import { expect } from 'chai'
 import { MockProvider, loadFixture } from 'ethereum-waffle'
 import { BigNumber, Wallet, utils } from 'ethers'
 import { DuckExpress, ERC20 } from '../../build'
-import { Offer } from '../../src/models/Offer'
 import { duckExpressFixture } from '../fixtures/duckExpressFixture'
 import { AsWalletFunction } from '../helpers/asWalletFactory'
 import { createDeliveryOfferParams, DeliveryOfferParams } from '../helpers/createDeliveryOfferParams'
@@ -52,17 +51,10 @@ describe.only('DuckExpress', () => {
   }
 
   describe('hashOffer', () => {
-    const offer: Offer = {
-      nonce: BigNumber.from(0),
-      deliveryTime: BigNumber.from(420),
-      tokenAddress: randomAddress(),
-      reward: BigNumber.from(100),
-      collateral: BigNumber.from(200),
-    }
-
     it('returns correct hash offer', async () => {
-      const expectedHash = hashOffer(customer.address, offer)
-      expect(await asCustomer(duckExpress).hashOffer(offer)).to.eq(expectedHash)
+      const params = await createDeliveryOfferParams(getDefaultParams())
+      const expectedHash = hashOffer(params[0])
+      expect(await duckExpress.hashOffer(...params)).to.eq(expectedHash)
     })
   })
 
@@ -184,7 +176,7 @@ describe.only('DuckExpress', () => {
 
       it('emits offer hash', async () => {
         const params = await createDeliveryOfferParams(defaultParams)
-        const offerHash = hashOffer(customer.address, params[0])
+        const offerHash = hashOffer(params[0])
         await expect(asCustomer(duckExpress).createDeliveryOffer(...params))
           .to.emit(duckExpress, 'DeliveryOfferCreated')
           .withArgs(customer.address, offerHash)
@@ -200,7 +192,7 @@ describe.only('DuckExpress', () => {
 
       it('sets offer status', async () => {
         const params = await createDeliveryOfferParams(defaultParams)
-        const offerHash = hashOffer(customer.address, params[0])
+        const offerHash = hashOffer(params[0])
         await asCustomer(duckExpress).createDeliveryOffer(...params)
 
         expect(await duckExpress.isOfferAvailable(offerHash)).to.be.true
@@ -208,7 +200,7 @@ describe.only('DuckExpress', () => {
 
       it('saves offer in the contract', async () => {
         const params = await createDeliveryOfferParams(defaultParams)
-        const offerHash = hashOffer(customer.address, params[0])
+        const offerHash = hashOffer(params[0])
         await asCustomer(duckExpress).createDeliveryOffer(...params)
 
         const offer = await duckExpress.offer(offerHash)
@@ -239,7 +231,7 @@ describe.only('DuckExpress', () => {
     beforeEach(async () => {
       defaultParams = getDefaultParams()
       const params = await createDeliveryOfferParams(defaultParams)
-      offerHash = hashOffer(customer.address, params[0])
+      offerHash = hashOffer(params[0])
       await prepareDuckExpress()
       await asCustomer(duckExpress).createDeliveryOffer(...params)
     })
