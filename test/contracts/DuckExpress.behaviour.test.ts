@@ -50,6 +50,112 @@ describe.only('DuckExpress', () => {
     await asCustomer(token).approve(duckExpress.address, 10_000)
   }
 
+  describe('offerStatus', () => {
+    let offerHash: string
+    let defaultParams: DeliveryOfferParams
+
+    beforeEach(async () => {
+      defaultParams = getDefaultParams()
+      const params = await createDeliveryOfferParams(defaultParams)
+      offerHash = hashOffer(params[0])
+      await prepareDuckExpress()
+      await asCustomer(duckExpress).createDeliveryOffer(...params)
+    })
+
+    it('reverts for invalid offer hash', async () => {
+      const invalidHash = utils.randomBytes(32)
+      await expect(asCustomer(duckExpress).offerStatus(invalidHash)).to.be.revertedWith(
+        'DuckExpress: no offer with provided hash',
+      )
+    })
+
+    it('returns correct available status', async () => {
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
+
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+    })
+
+    it('returns correct accepted status', async () => {
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
+    })
+
+    it('returns correct canceled status', async () => {
+      await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(3)
+    })
+  })
+
+  describe('offer', () => {
+    let offerHash: string
+    let defaultParams: DeliveryOfferParams
+
+    beforeEach(async () => {
+      defaultParams = getDefaultParams()
+      const params = await createDeliveryOfferParams(defaultParams)
+      offerHash = hashOffer(params[0])
+      await prepareDuckExpress()
+      await asCustomer(duckExpress).createDeliveryOffer(...params)
+    })
+
+    it('reverts for invalid offer hash', async () => {
+      const invalidHash = utils.randomBytes(32)
+      await expect(asCustomer(duckExpress).offer(invalidHash)).to.be.revertedWith(
+        'DuckExpress: no offer with provided hash',
+      )
+    })
+
+    it('returns correct offer', async () => {
+      const offer = await duckExpress.offer(offerHash)
+      expect(offer.nonce).to.eq(defaultParams.nonce)
+      expect(offer.customerAddress).to.eq(defaultParams.customerAddress)
+      expect(offer.addresseeAddress).to.eq(defaultParams.addresseeAddress)
+      expect(utils.parseBytes32String(offer.pickupAddress)).to.eq(defaultParams.pickupAddress)
+      expect(utils.parseBytes32String(offer.deliveryAddress)).to.eq(defaultParams.deliveryAddress)
+      expect(offer.deliveryTime).to.eq(defaultParams.deliveryTime)
+      expect(offer.tokenAddress).to.eq(defaultParams.tokenAddress)
+      expect(offer.reward).to.eq(defaultParams.reward)
+      expect(offer.collateral).to.eq(defaultParams.collateral)
+    })
+  })
+
+  describe('order', () => {
+    let offerHash: string
+    let defaultParams: DeliveryOfferParams
+
+    beforeEach(async () => {
+      defaultParams = getDefaultParams()
+      const params = await createDeliveryOfferParams(defaultParams)
+      offerHash = hashOffer(params[0])
+      await prepareDuckExpress()
+      await asCustomer(duckExpress).createDeliveryOffer(...params)
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+    })
+
+    it('reverts for invalid offer hash', async () => {
+      const invalidHash = utils.randomBytes(32)
+      await expect(asCustomer(duckExpress).order(invalidHash)).to.be.revertedWith(
+        'DuckExpress: no offer with provided hash',
+      )
+    })
+
+    it('returns correct order', async () => {
+      const order = await duckExpress.order(offerHash)
+      expect(order.offer.nonce).to.eq(defaultParams.nonce)
+      expect(order.offer.customerAddress).to.eq(defaultParams.customerAddress)
+      expect(order.offer.addresseeAddress).to.eq(defaultParams.addresseeAddress)
+      expect(utils.parseBytes32String(order.offer.pickupAddress)).to.eq(defaultParams.pickupAddress)
+      expect(utils.parseBytes32String(order.offer.deliveryAddress)).to.eq(defaultParams.deliveryAddress)
+      expect(order.offer.deliveryTime).to.eq(defaultParams.deliveryTime)
+      expect(order.offer.tokenAddress).to.eq(defaultParams.tokenAddress)
+      expect(order.offer.reward).to.eq(defaultParams.reward)
+      expect(order.offer.collateral).to.eq(defaultParams.collateral)
+      expect(order.status).to.eq(0)
+      expect(order.courierAddress).to.eq(courier.address)
+      expect(order.timestamp.gt(0)).to.be.true
+    })
+  })
+
   describe('hashOffer', () => {
     it('returns correct hash offer', async () => {
       const params = await createDeliveryOfferParams(getDefaultParams())
@@ -195,7 +301,7 @@ describe.only('DuckExpress', () => {
         const offerHash = hashOffer(params[0])
         await asCustomer(duckExpress).createDeliveryOffer(...params)
 
-        expect(await duckExpress.isOfferAvailable(offerHash)).to.be.true
+        expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
       })
 
       it('saves offer in the contract', async () => {
@@ -237,9 +343,16 @@ describe.only('DuckExpress', () => {
     })
 
     describe('main behaviour', () => {
-      it('reverts if the offer is unavailable', async () => {
+      it('reverts if the offer is invalid', async () => {
         const invalidHash = utils.randomBytes(32)
         await expect(asCourier(duckExpress).acceptDeliveryOffer(invalidHash)).to.be.revertedWith(
+          'DuckExpress: no offer with provided hash',
+        )
+      })
+
+      it('reverts if the offer was canceled', async () => {
+        await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
+        await expect(asCourier(duckExpress).acceptDeliveryOffer(offerHash)).to.be.revertedWith(
           'DuckExpress: the offer is unavailable',
         )
       })
@@ -266,9 +379,9 @@ describe.only('DuckExpress', () => {
         expect(order.timestamp.gt(BigNumber.from(0))).to.be.true
       })
 
-      it('changes the offer status to unavailable', async () => {
+      it('changes the offer status to accepted', async () => {
         await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-        expect(await duckExpress.isOfferAvailable(offerHash)).to.be.false
+        expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
       })
     })
   })
@@ -286,9 +399,16 @@ describe.only('DuckExpress', () => {
     })
 
     describe('main behaviour', () => {
-      it('reverts if the offer is unavailable', async () => {
+      it('reverts if the offer is invalid', async () => {
         const invalidHash = utils.randomBytes(32)
         await expect(asCustomer(duckExpress).cancelDeliveryOffer(invalidHash)).to.be.revertedWith(
+          'DuckExpress: no offer with provided hash',
+        )
+      })
+
+      it('reverts if the offer was already canceled', async () => {
+        await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
+        await expect(asCustomer(duckExpress).cancelDeliveryOffer(offerHash)).to.be.revertedWith(
           'DuckExpress: the offer is unavailable',
         )
       })
@@ -314,8 +434,7 @@ describe.only('DuckExpress', () => {
 
       it('sets correct offer status', async () => {
         await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
-        expect(await asCourier(duckExpress).isOfferAvailable(offerHash)).to.be.false
-        expect(await asCourier(duckExpress).isOfferUnavailable(offerHash)).to.be.false
+        expect(await asCourier(duckExpress).offerStatus(offerHash)).to.eq(3)
       })
     })
   })
@@ -337,7 +456,14 @@ describe.only('DuckExpress', () => {
       it('reverts if there is no order with provided hash', async () => {
         const invalidHash = utils.randomBytes(32)
         await expect(asCustomer(duckExpress).confirmPickUp(invalidHash)).to.be.revertedWith(
-          'DuckExpress: no order with provided hash',
+          'DuckExpress: no offer with provided hash',
+        )
+      })
+
+      it('reverts if the order was already picked up', async () => {
+        await asCustomer(duckExpress).confirmPickUp(offerHash)
+        await expect(asCustomer(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
+          'DuckExpress: invalid order status',
         )
       })
 

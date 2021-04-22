@@ -72,13 +72,13 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     }
 
     function acceptDeliveryOffer(bytes32 offerHash) external {
-        require(isOfferAvailable(offerHash), "DuckExpress: the offer is unavailable");
+        require(offerStatus(offerHash) == EnumerableMap.OfferStatus.AVAILABLE, "DuckExpress: the offer is unavailable");
 
         Offer memory offer = _offers[offerHash];
 
         IERC20(offer.tokenAddress).safeTransferFrom(msg.sender, address(this), offer.collateral);
 
-        _offerStatuses.set(offerHash, EnumerableMap.OfferStatus.UNAVAILABLE);
+        _offerStatuses.set(offerHash, EnumerableMap.OfferStatus.ACCEPTED);
 
         _orders[offerHash] = Order({
             offer: offer,
@@ -91,7 +91,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     }
 
     function cancelDeliveryOffer(bytes32 offerHash) external {
-        require(isOfferAvailable(offerHash), "DuckExpress: the offer is unavailable");
+        require(offerStatus(offerHash) == EnumerableMap.OfferStatus.AVAILABLE, "DuckExpress: the offer is unavailable");
         Offer memory offer = _offers[offerHash];
         require(offer.customerAddress == msg.sender, "DuckExpress: you are not the create of this offer");
 
@@ -101,7 +101,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     }
 
     function confirmPickUp(bytes32 offerHash) external {
-        require(isOfferUnavailable(offerHash), "DuckExpress: no order with provided hash");
+        require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
         Order memory order = _orders[offerHash];
         require(order.offer.customerAddress == msg.sender, "DuckExpress: you are not the create of this offer");
         require(order.status == OrderStatus.AWAITING_PICK_UP, "DuckExpress: invalid order status");
@@ -179,24 +179,18 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         return _nonces[customer];
     }
 
-    function isOfferAvailable(bytes32 offerHash) public view returns (bool) {
-        return _offerStatuses.contains(offerHash) &&
-            _offerStatuses.get(offerHash) == EnumerableMap.OfferStatus.AVAILABLE;
-    }
-
-    function isOfferUnavailable(bytes32 offerHash) public view returns (bool) {
-        return _offerStatuses.contains(offerHash) &&
-            _offerStatuses.get(offerHash) == EnumerableMap.OfferStatus.UNAVAILABLE;
+    function offerStatus(bytes32 offerHash) public view returns (EnumerableMap.OfferStatus) {
+        require(_offerStatuses.contains(offerHash), "DuckExpress: no offer with provided hash");
+        return _offerStatuses.get(offerHash);
     }
 
     function offer(bytes32 offerHash) external view returns (Offer memory) {
-        // TODO: match the revert message with the one in acceptDeliveryOffer
-        require(isOfferAvailable(offerHash), "DuckExpress: unavailable offer");
-
+        require(offerStatus(offerHash) != EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: no offer with provided hash");
         return _offers[offerHash];
     }
 
     function order(bytes32 offerHash) external view returns (Order memory) {
+        require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: no order with provided hash");
         return _orders[offerHash];
     }
 }
