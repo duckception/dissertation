@@ -272,4 +272,45 @@ describe.only('DuckExpress', () => {
       })
     })
   })
+
+  describe('cancelDeliveryOffer', () => {
+    let offerHash: string
+    let defaultParams: DeliveryOfferParams
+
+    beforeEach(async () => {
+      defaultParams = getDefaultParams()
+      const params = await createDeliveryOfferParams(defaultParams)
+      offerHash = hashOffer(params[0])
+      await prepareDuckExpress()
+      await asCustomer(duckExpress).createDeliveryOffer(...params)
+    })
+
+    describe('main behaviour', () => {
+      it('reverts if the offer is unavailable', async () => {
+        const invalidHash = utils.randomBytes(32)
+        await expect(asCustomer(duckExpress).cancelDeliveryOffer(invalidHash)).to.be.revertedWith(
+          'DuckExpress: the offer is unavailable',
+        )
+      })
+
+      it('reverts if sender is not the offer creator', async () => {
+        await expect(asCourier(duckExpress).cancelDeliveryOffer(offerHash)).to.be.revertedWith(
+          'DuckExpress: you are not the create of this offer',
+        )
+      })
+
+      it('emits event', async () => {
+        await expect(asCustomer(duckExpress).cancelDeliveryOffer(offerHash))
+          .to.emit(duckExpress, 'DeliveryOfferCanceled')
+          .withArgs(offerHash)
+      })
+
+      it('cancels the delivery offer', async () => {
+        await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
+        await expect(asCourier(duckExpress).acceptDeliveryOffer(offerHash)).to.be.revertedWith(
+          'DuckExpress: the offer is unavailable',
+        )
+      })
+    })
+  })
 })

@@ -28,6 +28,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     event TokenSupportStopped(address indexed tokenAddress);
     event DeliveryOfferCreated(address indexed customerAddress, bytes32 offerHash);
     event DeliveryOfferAccepted(address indexed courierAddress, bytes32 offerHash);
+    event DeliveryOfferCanceled(bytes32 indexed offerHash);
 
     // INITIALIZERS
 
@@ -88,18 +89,14 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         emit DeliveryOfferAccepted(msg.sender, offerHash);
     }
 
-    function hashOffer(Offer calldata offer) public pure returns (bytes32) {
-        return keccak256(abi.encode(
-            offer.nonce,
-            offer.customerAddress,
-            offer.addresseeAddress,
-            offer.pickupAddress,
-            offer.deliveryAddress,
-            offer.deliveryTime,
-            offer.tokenAddress,
-            offer.reward,
-            offer.collateral
-        ));
+    function cancelDeliveryOffer(bytes32 offerHash) external {
+        require(isOfferAvailable(offerHash), "DuckExpress: the offer is unavailable");
+        Offer memory offer = _offers[offerHash];
+        require(offer.customerAddress == msg.sender, "DuckExpress: you are not the create of this offer");
+
+        _offerStatuses.set(offerHash, EnumerableMap.OfferStatus.UNAVAILABLE);
+
+        emit DeliveryOfferCanceled(offerHash);
     }
 
     // cancel offer
@@ -113,6 +110,22 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     // refuse delivery
 
     // claim collateral
+
+    // HELPERS
+
+    function hashOffer(Offer calldata offer) public pure returns (bytes32) {
+        return keccak256(abi.encode(
+            offer.nonce,
+            offer.customerAddress,
+            offer.addresseeAddress,
+            offer.pickupAddress,
+            offer.deliveryAddress,
+            offer.deliveryTime,
+            offer.tokenAddress,
+            offer.reward,
+            offer.collateral
+        ));
+    }
 
     // SETTERS
 
@@ -163,6 +176,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     }
 
     function offer(bytes32 offerHash) external view returns (Offer memory) {
+        // TODO: match the revert message with the one in acceptDeliveryOffer
         require(isOfferAvailable(offerHash), "DuckExpress: unavailable offer");
 
         return _offers[offerHash];
