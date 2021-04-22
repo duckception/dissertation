@@ -29,6 +29,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     event DeliveryOfferCreated(address indexed customerAddress, bytes32 offerHash);
     event DeliveryOfferAccepted(address indexed courierAddress, bytes32 offerHash);
     event DeliveryOfferCanceled(bytes32 indexed offerHash);
+    event PackagePickedUp(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
 
     // INITIALIZERS
 
@@ -94,14 +95,22 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         Offer memory offer = _offers[offerHash];
         require(offer.customerAddress == msg.sender, "DuckExpress: you are not the create of this offer");
 
-        _offerStatuses.set(offerHash, EnumerableMap.OfferStatus.UNAVAILABLE);
+        _offerStatuses.set(offerHash, EnumerableMap.OfferStatus.CANCELED);
 
         emit DeliveryOfferCanceled(offerHash);
     }
 
-    // cancel offer
+    function confirmPickUp(bytes32 offerHash) external {
+        require(isOfferUnavailable(offerHash), "DuckExpress: no order with provided hash");
+        Order memory order = _orders[offerHash];
+        require(order.offer.customerAddress == msg.sender, "DuckExpress: you are not the create of this offer");
+        require(order.status == OrderStatus.AWAITING_PICK_UP, "DuckExpress: invalid order status");
 
-    // accept delivery offer
+        order.status = OrderStatus.PICKED_UP;
+        _orders[offerHash] = order;
+
+        emit PackagePickedUp(msg.sender, order.courierAddress, offerHash);
+    }
 
     // confirm pick up
 
@@ -173,6 +182,11 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     function isOfferAvailable(bytes32 offerHash) public view returns (bool) {
         return _offerStatuses.contains(offerHash) &&
             _offerStatuses.get(offerHash) == EnumerableMap.OfferStatus.AVAILABLE;
+    }
+
+    function isOfferUnavailable(bytes32 offerHash) public view returns (bool) {
+        return _offerStatuses.contains(offerHash) &&
+            _offerStatuses.get(offerHash) == EnumerableMap.OfferStatus.UNAVAILABLE;
     }
 
     function offer(bytes32 offerHash) external view returns (Offer memory) {

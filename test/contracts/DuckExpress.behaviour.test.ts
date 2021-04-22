@@ -311,6 +311,60 @@ describe.only('DuckExpress', () => {
           'DuckExpress: the offer is unavailable',
         )
       })
+
+      it('sets correct offer status', async () => {
+        await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
+        expect(await asCourier(duckExpress).isOfferAvailable(offerHash)).to.be.false
+        expect(await asCourier(duckExpress).isOfferUnavailable(offerHash)).to.be.false
+      })
+    })
+  })
+
+  describe('confirmPickUp', () => {
+    let offerHash: string
+    let defaultParams: DeliveryOfferParams
+
+    beforeEach(async () => {
+      defaultParams = getDefaultParams()
+      const params = await createDeliveryOfferParams(defaultParams)
+      offerHash = hashOffer(params[0])
+      await prepareDuckExpress()
+      await asCustomer(duckExpress).createDeliveryOffer(...params)
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+    })
+
+    describe('main behaviour', () => {
+      it('reverts if there is no order with provided hash', async () => {
+        const invalidHash = utils.randomBytes(32)
+        await expect(asCustomer(duckExpress).confirmPickUp(invalidHash)).to.be.revertedWith(
+          'DuckExpress: no order with provided hash',
+        )
+      })
+
+      it('reverts if sender is not the offer creator', async () => {
+        await expect(asCourier(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
+          'DuckExpress: you are not the create of this offer',
+        )
+      })
+
+      it('reverts if the offer has invalid status', async () => {
+        await asCustomer(duckExpress).confirmPickUp(offerHash)
+        await expect(asCustomer(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
+          'DuckExpress: invalid order status',
+        )
+      })
+
+      it('emits event', async () => {
+        await expect(asCustomer(duckExpress).confirmPickUp(offerHash))
+          .to.emit(duckExpress, 'PackagePickedUp')
+          .withArgs(customer.address, courier.address, offerHash)
+      })
+
+      it('sets the order status', async () => {
+        await asCustomer(duckExpress).confirmPickUp(offerHash)
+        const order = await duckExpress.order(offerHash)
+        expect(order.status).to.eq(1)
+      })
     })
   })
 })

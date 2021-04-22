@@ -156,7 +156,8 @@ library EnumerableMap{
 
     enum OfferStatus {
         AVAILABLE,
-        UNAVAILABLE
+        UNAVAILABLE,
+        CANCELED
     }
 
     /**
