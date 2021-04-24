@@ -404,7 +404,7 @@ describe.only('DuckExpress', () => {
     it('reverts if the offer is invalid', async () => {
       const invalidHash = utils.randomBytes(32)
       await expect(asCustomer(duckExpress).cancelDeliveryOffer(invalidHash)).to.be.revertedWith(
-        'DuckExpress: no offer with provided hash',
+        'DuckExpress: caller is not the offer creator',
       )
     })
 
@@ -417,7 +417,7 @@ describe.only('DuckExpress', () => {
 
     it('reverts if sender is not the offer creator', async () => {
       await expect(asCourier(duckExpress).cancelDeliveryOffer(offerHash)).to.be.revertedWith(
-        'DuckExpress: you are not the creator of this offer',
+        'DuckExpress: caller is not the offer creator',
       )
     })
 
@@ -456,7 +456,7 @@ describe.only('DuckExpress', () => {
     it('reverts if there is no order with provided hash', async () => {
       const invalidHash = utils.randomBytes(32)
       await expect(asCustomer(duckExpress).confirmPickUp(invalidHash)).to.be.revertedWith(
-        'DuckExpress: no offer with provided hash',
+        'DuckExpress: caller is not the offer creator',
       )
     })
 
@@ -469,7 +469,7 @@ describe.only('DuckExpress', () => {
 
     it('reverts if sender is not the offer creator', async () => {
       await expect(asCourier(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
-        'DuckExpress: you are not the creator of this offer',
+        'DuckExpress: caller is not the offer creator',
       )
     })
 
@@ -511,7 +511,7 @@ describe.only('DuckExpress', () => {
       it('reverts if there is no order with provided hash', async () => {
         const invalidHash = utils.randomBytes(32)
         await expect(asAddressee(duckExpress).confirmDelivery(invalidHash)).to.be.revertedWith(
-          'DuckExpress: no offer with provided hash',
+          'DuckExpress: caller is neither the offer creator nor the offer addressee',
         )
       })
 
@@ -525,8 +525,8 @@ describe.only('DuckExpress', () => {
 
     describe('main behaviour - after pick up', () => {
       it('reverts if sender is not the addressee', async () => {
-        await expect(asCourier(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
-          'DuckExpress: you are not the addressee of this order',
+        await expect(asCustomer(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+          'DuckExpress: caller is not the offer addressee',
         )
       })
 
@@ -563,8 +563,8 @@ describe.only('DuckExpress', () => {
       })
 
       it('reverts if sender is not the customer', async () => {
-        await expect(asCourier(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
-          'DuckExpress: you are not the creator of this offer',
+        await expect(asAddressee(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+          'DuckExpress: caller is not the offer creator',
         )
       })
 
@@ -614,7 +614,7 @@ describe.only('DuckExpress', () => {
       it('reverts if there is no order with provided hash', async () => {
         const invalidHash = utils.randomBytes(32)
         await expect(asAddressee(duckExpress).refuseDelivery(invalidHash)).to.be.revertedWith(
-          'DuckExpress: no offer with provided hash',
+          'DuckExpress: caller is neither the offer creator nor the offer addressee',
         )
       })
 
@@ -628,8 +628,8 @@ describe.only('DuckExpress', () => {
 
     describe('main behaviour - after pick up', () => {
       it('reverts if sender is not the addressee', async () => {
-        await expect(asCourier(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
-          'DuckExpress: you are not the addressee of this order',
+        await expect(asCustomer(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+          'DuckExpress: caller is not the offer addressee',
         )
       })
 
@@ -652,8 +652,8 @@ describe.only('DuckExpress', () => {
       })
 
       it('reverts if sender is not the customer', async () => {
-        await expect(asCourier(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
-          'DuckExpress: you are not the creator of this offer',
+        await expect(asAddressee(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+          'caller is not the offer creator',
         )
       })
 

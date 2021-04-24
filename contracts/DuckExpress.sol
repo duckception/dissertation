@@ -23,6 +23,27 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     // EnumerableMap.HashToOfferStatusMap internal _offerStatuses;
     // mapping (bytes32 => Offer) internal _offers;
 
+    modifier onlyCustomer(bytes32 offerHash) {
+        Offer storage offer = _offers[offerHash];
+        require(msg.sender == offer.customerAddress, "DuckExpress: caller is not the offer creator");
+
+        _;
+    }
+
+    modifier onlyAddressee(bytes32 offerHash) {
+        Offer storage offer = _offers[offerHash];
+        require(msg.sender == offer.addresseeAddress, "DuckExpress: caller is not the offer addressee");
+
+        _;
+    }
+
+    modifier onlyCustomerOrAddressee(bytes32 offerHash) {
+        Offer storage offer = _offers[offerHash];
+        require(msg.sender == offer.customerAddress || msg.sender == offer.addresseeAddress, "DuckExpress: caller is neither the offer creator nor the offer addressee");
+
+        _;
+    }
+
     event MinDeliveryTimeSet(uint256 indexed time);
     event TokenSupported(address indexed tokenAddress);
     event TokenSupportStopped(address indexed tokenAddress);
@@ -78,7 +99,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     function acceptDeliveryOffer(bytes32 offerHash) external {
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.AVAILABLE, "DuckExpress: the offer is unavailable");
 
-        Offer memory offer = _offers[offerHash];
+        Offer storage offer = _offers[offerHash];
 
         IERC20(offer.tokenAddress).safeTransferFrom(msg.sender, address(this), offer.collateral);
 
@@ -94,19 +115,17 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         emit DeliveryOfferAccepted(msg.sender, offerHash);
     }
 
-    function cancelDeliveryOffer(bytes32 offerHash) external {
+    function cancelDeliveryOffer(bytes32 offerHash) external onlyCustomer(offerHash) {
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.AVAILABLE, "DuckExpress: the offer is unavailable");
-        Offer memory offer = _offers[offerHash];
-        require(offer.customerAddress == msg.sender, "DuckExpress: you are not the creator of this offer");
 
         _offerStatuses.set(offerHash, EnumerableMap.OfferStatus.CANCELED);
 
         emit DeliveryOfferCanceled(offerHash);
     }
 
-    function confirmPickUp(bytes32 offerHash) external {
+    function confirmPickUp(bytes32 offerHash) external onlyCustomer(offerHash) {
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
-        Order memory order = _orders[offerHash];
+        Order storage order = _orders[offerHash];
         require(order.offer.customerAddress == msg.sender, "DuckExpress: you are not the creator of this offer");
         require(order.status == OrderStatus.AWAITING_PICK_UP, "DuckExpress: invalid order status");
 
@@ -116,13 +135,13 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         emit PackagePickedUp(msg.sender, order.courierAddress, offerHash);
     }
 
-    function confirmDelivery(bytes32 offerHash) external {
+    function confirmDelivery(bytes32 offerHash) external onlyCustomerOrAddressee(offerHash) {
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
-        Order memory order = _orders[offerHash];
+        Order storage order = _orders[offerHash];
         require(order.status == OrderStatus.PICKED_UP || order.status == OrderStatus.REFUSED, "DuckExpress: invalid order status");
 
         if (order.status == OrderStatus.PICKED_UP) {
-            require(order.offer.addresseeAddress == msg.sender, "DuckExpress: you are not the addressee of this order");
+            require(order.offer.addresseeAddress == msg.sender, "DuckExpress: caller is not the offer addressee");
 
             order.status = OrderStatus.DELIVERED;
             _orders[offerHash] = order;
@@ -133,7 +152,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
 
             emit PackageDelivered(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
         } else {
-            require(order.offer.customerAddress == msg.sender, "DuckExpress: you are not the creator of this offer");
+            require(order.offer.customerAddress == msg.sender, "DuckExpress: caller is not the offer creator");
 
             order.status = OrderStatus.RETURNED;
             _orders[offerHash] = order;
@@ -146,20 +165,20 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         }
     }
 
-    function refuseDelivery(bytes32 offerHash) external {
+    function refuseDelivery(bytes32 offerHash) external onlyCustomerOrAddressee(offerHash) {
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
-        Order memory order = _orders[offerHash];
+        Order storage order = _orders[offerHash];
         require(order.status == OrderStatus.PICKED_UP || order.status == OrderStatus.REFUSED, "DuckExpress: invalid order status");
 
         if (order.status == OrderStatus.PICKED_UP) {
-            require(order.offer.addresseeAddress == msg.sender, "DuckExpress: you are not the addressee of this order");
+            require(order.offer.addresseeAddress == msg.sender, "DuckExpress: caller is not the offer addressee");
 
             order.status = OrderStatus.REFUSED;
             _orders[offerHash] = order;
 
             emit DeliveryRefused(order.offer.addresseeAddress, order.courierAddress, offerHash);
         } else {
-            require(order.offer.customerAddress == msg.sender, "DuckExpress: you are not the creator of this offer");
+            require(order.offer.customerAddress == msg.sender, "DuckExpress: caller is not the offer creator");
 
             order.status = OrderStatus.FAILED;
             _orders[offerHash] = order;
@@ -171,8 +190,6 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
             emit DeliveryFailed(order.offer.customerAddress, order.courierAddress, offerHash);
         }
     }
-
-    // TODO: Add method modifiers such as "asAddressee" etc.
 
     // claim collateral
 
