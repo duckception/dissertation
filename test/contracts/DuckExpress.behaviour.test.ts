@@ -14,8 +14,10 @@ describe.only('DuckExpress', () => {
   let token: ERC20
   let customer: Wallet
   let courier: Wallet
+  let addressee: Wallet
   let asCustomer: AsWalletFunction
   let asCourier: AsWalletFunction
+  let asAddressee: AsWalletFunction
 
   beforeEach(async () => {
     ({
@@ -24,17 +26,20 @@ describe.only('DuckExpress', () => {
       token,
       customer,
       courier,
+      addressee,
       asCustomer,
       asCourier,
+      asAddressee,
     } = await loadFixture(
       duckExpressFixture,
     ))
   })
+
   function getDefaultParams(): DeliveryOfferParams {
     return {
       nonce: 0,
       customerAddress: customer.address,
-      addresseeAddress: randomAddress(),
+      addresseeAddress: addressee.address,
       pickupAddress: 'Bulwarowa 20 Kraków 31-751',
       deliveryAddress: 'Opatowska 48 Warszawa 01-622',
       deliveryTime: 12 * 3600,
@@ -363,7 +368,7 @@ describe.only('DuckExpress', () => {
           .withArgs(courier.address, offerHash)
       })
 
-      it('sends collateral to the contract', async () => {
+      it('sends collateral from courier to the contract', async () => {
         const balanceBefore = await token.balanceOf(duckExpress.address)
         await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
         const currentBalance = await token.balanceOf(duckExpress.address)
@@ -491,6 +496,74 @@ describe.only('DuckExpress', () => {
         const order = await duckExpress.order(offerHash)
         expect(order.status).to.eq(1)
       })
+    })
+  })
+
+  describe('confirmDelivery', () => {
+    let offerHash: string
+    let defaultParams: DeliveryOfferParams
+
+    beforeEach(async () => {
+      defaultParams = getDefaultParams()
+      const params = await createDeliveryOfferParams(defaultParams)
+      offerHash = hashOffer(params[0])
+      await prepareDuckExpress()
+      await asCustomer(duckExpress).createDeliveryOffer(...params)
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+      await asCustomer(duckExpress).confirmPickUp(offerHash)
+    })
+
+    it('reverts if there is no order with provided hash', async () => {
+      const invalidHash = utils.randomBytes(32)
+      await expect(asAddressee(duckExpress).confirmDelivery(invalidHash)).to.be.revertedWith(
+        'DuckExpress: no offer with provided hash',
+      )
+    })
+
+    it('reverts if the order was already delivered', async () => {
+      await asAddressee(duckExpress).confirmDelivery(offerHash)
+      await expect(asAddressee(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+        'DuckExpress: invalid order status',
+      )
+    })
+
+    it('reverts if sender is not the addressee', async () => {
+      await expect(asCourier(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+        'DuckExpress: you are not the addressee of this order',
+      )
+    })
+
+    it('reverts if the offer has invalid status', async () => {
+      await asAddressee(duckExpress).confirmDelivery(offerHash)
+      await expect(asAddressee(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+        'DuckExpress: invalid order status',
+      )
+    })
+
+    it('emits event', async () => {
+      await expect(asAddressee(duckExpress).confirmDelivery(offerHash))
+        .to.emit(duckExpress, 'PackageDelivered')
+        .withArgs(customer.address, addressee.address, courier.address, offerHash)
+    })
+
+    it('sets the order status', async () => {
+      await asAddressee(duckExpress).confirmDelivery(offerHash)
+      const order = await duckExpress.order(offerHash)
+      expect(order.status).to.eq(2)
+    })
+
+    it('transfers reward and collateral from contract to the courier', async () => {
+      const courierBalanceBefore = await token.balanceOf(courier.address)
+
+      await asAddressee(duckExpress).confirmDelivery(offerHash)
+
+      const contractBalance = await token.balanceOf(duckExpress.address)
+      const courierBalance = await token.balanceOf(courier.address)
+      const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
+      const expectedCourierBalance = rewardAndCollateral.add(courierBalanceBefore)
+
+      expect(contractBalance).to.eq(0)
+      expect(courierBalance).to.eq(expectedCourierBalance)
     })
   })
 })

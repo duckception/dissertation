@@ -30,6 +30,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     event DeliveryOfferAccepted(address indexed courierAddress, bytes32 offerHash);
     event DeliveryOfferCanceled(bytes32 indexed offerHash);
     event PackagePickedUp(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
+    event PackageDelivered(address indexed customerAddress, address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
 
     // INITIALIZERS
 
@@ -112,9 +113,21 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         emit PackagePickedUp(msg.sender, order.courierAddress, offerHash);
     }
 
-    // confirm pick up
+    function confirmDelivery(bytes32 offerHash) external {
+        require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
+        Order memory order = _orders[offerHash];
+        require(order.offer.addresseeAddress == msg.sender, "DuckExpress: you are not the addressee of this order");
+        require(order.status == OrderStatus.PICKED_UP, "DuckExpress: invalid order status");
 
-    // confirm delivery
+        order.status = OrderStatus.DELIVERED;
+        _orders[offerHash] = order;
+        IERC20 token = IERC20(order.offer.tokenAddress);
+
+        token.safeTransfer(order.courierAddress, order.offer.reward);
+        token.safeTransfer(order.courierAddress, order.offer.collateral);
+
+        emit PackageDelivered(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
+    }
 
     // refuse delivery
 
