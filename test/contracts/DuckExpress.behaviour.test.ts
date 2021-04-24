@@ -560,4 +560,58 @@ describe.only('DuckExpress', () => {
       expect(courierBalance).to.eq(expectedCourierBalance)
     })
   })
+
+  describe('refuseDelivery', () => {
+    let offerHash: string
+    let defaultParams: DeliveryOfferParams
+
+    beforeEach(async () => {
+      defaultParams = getDefaultParams()
+      const params = await createDeliveryOfferParams(defaultParams)
+      offerHash = hashOffer(params[0])
+      await prepareDuckExpress()
+      await asCustomer(duckExpress).createDeliveryOffer(...params)
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+      await asCustomer(duckExpress).confirmPickUp(offerHash)
+    })
+
+    it('reverts if there is no order with provided hash', async () => {
+      const invalidHash = utils.randomBytes(32)
+      await expect(asAddressee(duckExpress).refuseDelivery(invalidHash)).to.be.revertedWith(
+        'DuckExpress: no offer with provided hash',
+      )
+    })
+
+    it('reverts if the order was already delivered', async () => {
+      await asAddressee(duckExpress).refuseDelivery(offerHash)
+      await expect(asAddressee(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+        'DuckExpress: invalid order status',
+      )
+    })
+
+    it('reverts if sender is not the addressee', async () => {
+      await expect(asCourier(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+        'DuckExpress: you are not the addressee of this order',
+      )
+    })
+
+    it('reverts if the offer has invalid status', async () => {
+      await asAddressee(duckExpress).refuseDelivery(offerHash)
+      await expect(asAddressee(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+        'DuckExpress: invalid order status',
+      )
+    })
+
+    it('emits event', async () => {
+      await expect(asAddressee(duckExpress).refuseDelivery(offerHash))
+        .to.emit(duckExpress, 'DeliveryRefused')
+        .withArgs(addressee.address, courier.address, offerHash)
+    })
+
+    it('sets the order status', async () => {
+      await asAddressee(duckExpress).refuseDelivery(offerHash)
+      const order = await duckExpress.order(offerHash)
+      expect(order.status).to.eq(4)
+    })
+  })
 })

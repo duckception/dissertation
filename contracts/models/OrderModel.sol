@@ -10,9 +10,9 @@ abstract contract OrderModel is OfferModel {
         PICKED_UP,
         DELIVERED,
         DELIVERED_LATE,
-        RETURNED,
         REFUSED,
-        CLAIMED
+        CLAIMED,
+        RETURNED
     }
 
     struct Order {

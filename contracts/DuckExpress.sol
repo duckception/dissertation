@@ -31,6 +31,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     event DeliveryOfferCanceled(bytes32 indexed offerHash);
     event PackagePickedUp(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
     event PackageDelivered(address indexed customerAddress, address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
+    event DeliveryRefused(address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
 
     // INITIALIZERS
 
@@ -129,7 +130,19 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         emit PackageDelivered(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
     }
 
-    // refuse delivery
+    function refuseDelivery(bytes32 offerHash) external {
+        require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
+        Order memory order = _orders[offerHash];
+        require(order.offer.addresseeAddress == msg.sender, "DuckExpress: you are not the addressee of this order");
+        require(order.status == OrderStatus.PICKED_UP, "DuckExpress: invalid order status");
+
+        order.status = OrderStatus.REFUSED;
+        _orders[offerHash] = order;
+
+        emit DeliveryRefused(order.offer.addresseeAddress, order.courierAddress, offerHash);
+    }
+
+    // TODO: Add method modifiers such as "asAddressee" etc.
 
     // claim collateral
 
