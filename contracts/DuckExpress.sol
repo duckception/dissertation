@@ -252,6 +252,13 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         return _nonces[customer];
     }
 
+    function deliveryDeadline(bytes32 offerHash) public view returns (uint256) {
+        require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: no order with provided hash");
+        Order storage _order = _orders[offerHash];
+
+        return _order.timestamp.add(_order.offer.deliveryTime);
+    }
+
     function offerStatus(bytes32 offerHash) public view returns (EnumerableMap.OfferStatus) {
         require(_offerStatuses.contains(offerHash), "DuckExpress: no offer with provided hash");
         return _offerStatuses.get(offerHash);

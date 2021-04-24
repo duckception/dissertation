@@ -169,6 +169,34 @@ describe.only('DuckExpress', () => {
     })
   })
 
+  describe('deliveryDeadline', () => {
+    let offerHash: string
+    let defaultParams: DeliveryOfferParams
+
+    beforeEach(async () => {
+      defaultParams = getDefaultParams()
+      const params = await createDeliveryOfferParams(defaultParams)
+      offerHash = hashOffer(params[0])
+      await prepareDuckExpress()
+      await asCustomer(duckExpress).createDeliveryOffer(...params)
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+    })
+
+    it('reverts for invalid offer hash', async () => {
+      const invalidHash = utils.randomBytes(32)
+      await expect(asCustomer(duckExpress).order(invalidHash)).to.be.revertedWith(
+        'DuckExpress: no offer with provided hash',
+      )
+    })
+
+    it('returns correct delivery deadline', async () => {
+      const order = await duckExpress.order(offerHash)
+      const expectedDeadline = BigNumber.from(defaultParams.deliveryTime).add(order.timestamp)
+      const deadline = await duckExpress.deliveryDeadline(offerHash)
+      expect(deadline).to.eq(expectedDeadline)
+    })
+  })
+
   describe('createDeliveryOffer', () => {
     let defaultParams: DeliveryOfferParams
 
