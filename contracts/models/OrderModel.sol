@@ -11,6 +11,7 @@ abstract contract OrderModel is OfferModel {
         DELIVERED,
         DELIVERED_LATE,
         REFUSED,
+        FAILED,
         CLAIMED,
         RETURNED
     }

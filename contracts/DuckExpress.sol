@@ -31,7 +31,9 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     event DeliveryOfferCanceled(bytes32 indexed offerHash);
     event PackagePickedUp(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
     event PackageDelivered(address indexed customerAddress, address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
+    event PackageReturned(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
     event DeliveryRefused(address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
+    event DeliveryFailed(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
 
     // INITIALIZERS
 
@@ -95,7 +97,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     function cancelDeliveryOffer(bytes32 offerHash) external {
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.AVAILABLE, "DuckExpress: the offer is unavailable");
         Offer memory offer = _offers[offerHash];
-        require(offer.customerAddress == msg.sender, "DuckExpress: you are not the create of this offer");
+        require(offer.customerAddress == msg.sender, "DuckExpress: you are not the creator of this offer");
 
         _offerStatuses.set(offerHash, EnumerableMap.OfferStatus.CANCELED);
 
@@ -105,7 +107,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     function confirmPickUp(bytes32 offerHash) external {
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
         Order memory order = _orders[offerHash];
-        require(order.offer.customerAddress == msg.sender, "DuckExpress: you are not the create of this offer");
+        require(order.offer.customerAddress == msg.sender, "DuckExpress: you are not the creator of this offer");
         require(order.status == OrderStatus.AWAITING_PICK_UP, "DuckExpress: invalid order status");
 
         order.status = OrderStatus.PICKED_UP;
@@ -117,29 +119,57 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     function confirmDelivery(bytes32 offerHash) external {
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
         Order memory order = _orders[offerHash];
-        require(order.offer.addresseeAddress == msg.sender, "DuckExpress: you are not the addressee of this order");
-        require(order.status == OrderStatus.PICKED_UP, "DuckExpress: invalid order status");
+        require(order.status == OrderStatus.PICKED_UP || order.status == OrderStatus.REFUSED, "DuckExpress: invalid order status");
 
-        order.status = OrderStatus.DELIVERED;
-        _orders[offerHash] = order;
-        IERC20 token = IERC20(order.offer.tokenAddress);
+        if (order.status == OrderStatus.PICKED_UP) {
+            require(order.offer.addresseeAddress == msg.sender, "DuckExpress: you are not the addressee of this order");
 
-        token.safeTransfer(order.courierAddress, order.offer.reward);
-        token.safeTransfer(order.courierAddress, order.offer.collateral);
+            order.status = OrderStatus.DELIVERED;
+            _orders[offerHash] = order;
+            IERC20 token = IERC20(order.offer.tokenAddress);
 
-        emit PackageDelivered(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
+            token.safeTransfer(order.courierAddress, order.offer.reward);
+            token.safeTransfer(order.courierAddress, order.offer.collateral);
+
+            emit PackageDelivered(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
+        } else {
+            require(order.offer.customerAddress == msg.sender, "DuckExpress: you are not the creator of this offer");
+
+            order.status = OrderStatus.RETURNED;
+            _orders[offerHash] = order;
+            IERC20 token = IERC20(order.offer.tokenAddress);
+
+            token.safeTransfer(order.courierAddress, order.offer.reward);
+            token.safeTransfer(order.courierAddress, order.offer.collateral);
+
+            emit PackageReturned(order.offer.customerAddress, order.courierAddress, offerHash);
+        }
     }
 
     function refuseDelivery(bytes32 offerHash) external {
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
         Order memory order = _orders[offerHash];
-        require(order.offer.addresseeAddress == msg.sender, "DuckExpress: you are not the addressee of this order");
-        require(order.status == OrderStatus.PICKED_UP, "DuckExpress: invalid order status");
+        require(order.status == OrderStatus.PICKED_UP || order.status == OrderStatus.REFUSED, "DuckExpress: invalid order status");
 
-        order.status = OrderStatus.REFUSED;
-        _orders[offerHash] = order;
+        if (order.status == OrderStatus.PICKED_UP) {
+            require(order.offer.addresseeAddress == msg.sender, "DuckExpress: you are not the addressee of this order");
 
-        emit DeliveryRefused(order.offer.addresseeAddress, order.courierAddress, offerHash);
+            order.status = OrderStatus.REFUSED;
+            _orders[offerHash] = order;
+
+            emit DeliveryRefused(order.offer.addresseeAddress, order.courierAddress, offerHash);
+        } else {
+            require(order.offer.customerAddress == msg.sender, "DuckExpress: you are not the creator of this offer");
+
+            order.status = OrderStatus.FAILED;
+            _orders[offerHash] = order;
+            IERC20 token = IERC20(order.offer.tokenAddress);
+
+            token.safeTransfer(order.offer.customerAddress, order.offer.reward);
+            token.safeTransfer(order.offer.customerAddress, order.offer.collateral);
+
+            emit DeliveryFailed(order.offer.customerAddress, order.courierAddress, offerHash);
+        }
     }
 
     // TODO: Add method modifiers such as "asAddressee" etc.

@@ -417,7 +417,7 @@ describe.only('DuckExpress', () => {
 
     it('reverts if sender is not the offer creator', async () => {
       await expect(asCourier(duckExpress).cancelDeliveryOffer(offerHash)).to.be.revertedWith(
-        'DuckExpress: you are not the create of this offer',
+        'DuckExpress: you are not the creator of this offer',
       )
     })
 
@@ -469,7 +469,7 @@ describe.only('DuckExpress', () => {
 
     it('reverts if sender is not the offer creator', async () => {
       await expect(asCourier(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
-        'DuckExpress: you are not the create of this offer',
+        'DuckExpress: you are not the creator of this offer',
       )
     })
 
@@ -507,57 +507,92 @@ describe.only('DuckExpress', () => {
       await asCustomer(duckExpress).confirmPickUp(offerHash)
     })
 
-    it('reverts if there is no order with provided hash', async () => {
-      const invalidHash = utils.randomBytes(32)
-      await expect(asAddressee(duckExpress).confirmDelivery(invalidHash)).to.be.revertedWith(
-        'DuckExpress: no offer with provided hash',
-      )
+    describe('validation', () => {
+      it('reverts if there is no order with provided hash', async () => {
+        const invalidHash = utils.randomBytes(32)
+        await expect(asAddressee(duckExpress).confirmDelivery(invalidHash)).to.be.revertedWith(
+          'DuckExpress: no offer with provided hash',
+        )
+      })
+
+      it('reverts if the order was already delivered or was not picked up yet', async () => {
+        await asAddressee(duckExpress).confirmDelivery(offerHash)
+        await expect(asAddressee(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+          'DuckExpress: invalid order status',
+        )
+      })
     })
 
-    it('reverts if the order was already delivered', async () => {
-      await asAddressee(duckExpress).confirmDelivery(offerHash)
-      await expect(asAddressee(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
-        'DuckExpress: invalid order status',
-      )
+    describe('main behaviour - after pick up', () => {
+      it('reverts if sender is not the addressee', async () => {
+        await expect(asCourier(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+          'DuckExpress: you are not the addressee of this order',
+        )
+      })
+
+      it('emits event', async () => {
+        await expect(asAddressee(duckExpress).confirmDelivery(offerHash))
+          .to.emit(duckExpress, 'PackageDelivered')
+          .withArgs(customer.address, addressee.address, courier.address, offerHash)
+      })
+
+      it('sets the order status', async () => {
+        await asAddressee(duckExpress).confirmDelivery(offerHash)
+        const order = await duckExpress.order(offerHash)
+        expect(order.status).to.eq(2)
+      })
+
+      it('transfers reward and collateral from contract to the courier', async () => {
+        const courierBalanceBefore = await token.balanceOf(courier.address)
+
+        await asAddressee(duckExpress).confirmDelivery(offerHash)
+
+        const contractBalance = await token.balanceOf(duckExpress.address)
+        const courierBalance = await token.balanceOf(courier.address)
+        const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
+        const expectedCourierBalance = rewardAndCollateral.add(courierBalanceBefore)
+
+        expect(contractBalance).to.eq(0)
+        expect(courierBalance).to.eq(expectedCourierBalance)
+      })
     })
 
-    it('reverts if sender is not the addressee', async () => {
-      await expect(asCourier(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
-        'DuckExpress: you are not the addressee of this order',
-      )
-    })
+    describe('main behaviour - after addressee refusal', () => {
+      beforeEach(async () => {
+        await asAddressee(duckExpress).refuseDelivery(offerHash)
+      })
 
-    it('reverts if the offer has invalid status', async () => {
-      await asAddressee(duckExpress).confirmDelivery(offerHash)
-      await expect(asAddressee(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
-        'DuckExpress: invalid order status',
-      )
-    })
+      it('reverts if sender is not the customer', async () => {
+        await expect(asCourier(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+          'DuckExpress: you are not the creator of this offer',
+        )
+      })
 
-    it('emits event', async () => {
-      await expect(asAddressee(duckExpress).confirmDelivery(offerHash))
-        .to.emit(duckExpress, 'PackageDelivered')
-        .withArgs(customer.address, addressee.address, courier.address, offerHash)
-    })
+      it('emits event', async () => {
+        await expect(asCustomer(duckExpress).confirmDelivery(offerHash))
+          .to.emit(duckExpress, 'PackageReturned')
+          .withArgs(customer.address, courier.address, offerHash)
+      })
 
-    it('sets the order status', async () => {
-      await asAddressee(duckExpress).confirmDelivery(offerHash)
-      const order = await duckExpress.order(offerHash)
-      expect(order.status).to.eq(2)
-    })
+      it('sets the order status', async () => {
+        await asCustomer(duckExpress).confirmDelivery(offerHash)
+        const order = await duckExpress.order(offerHash)
+        expect(order.status).to.eq(7)
+      })
 
-    it('transfers reward and collateral from contract to the courier', async () => {
-      const courierBalanceBefore = await token.balanceOf(courier.address)
+      it('transfers reward and collateral from contract to the courier', async () => {
+        const courierBalanceBefore = await token.balanceOf(courier.address)
 
-      await asAddressee(duckExpress).confirmDelivery(offerHash)
+        await asCustomer(duckExpress).confirmDelivery(offerHash)
 
-      const contractBalance = await token.balanceOf(duckExpress.address)
-      const courierBalance = await token.balanceOf(courier.address)
-      const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
-      const expectedCourierBalance = rewardAndCollateral.add(courierBalanceBefore)
+        const contractBalance = await token.balanceOf(duckExpress.address)
+        const courierBalance = await token.balanceOf(courier.address)
+        const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
+        const expectedCourierBalance = rewardAndCollateral.add(courierBalanceBefore)
 
-      expect(contractBalance).to.eq(0)
-      expect(courierBalance).to.eq(expectedCourierBalance)
+        expect(contractBalance).to.eq(0)
+        expect(courierBalance).to.eq(expectedCourierBalance)
+      })
     })
   })
 
@@ -575,43 +610,78 @@ describe.only('DuckExpress', () => {
       await asCustomer(duckExpress).confirmPickUp(offerHash)
     })
 
-    it('reverts if there is no order with provided hash', async () => {
-      const invalidHash = utils.randomBytes(32)
-      await expect(asAddressee(duckExpress).refuseDelivery(invalidHash)).to.be.revertedWith(
-        'DuckExpress: no offer with provided hash',
-      )
+    describe('validation', () => {
+      it('reverts if there is no order with provided hash', async () => {
+        const invalidHash = utils.randomBytes(32)
+        await expect(asAddressee(duckExpress).refuseDelivery(invalidHash)).to.be.revertedWith(
+          'DuckExpress: no offer with provided hash',
+        )
+      })
+
+      it('reverts if the order was already delivered or was not picked up yet', async () => {
+        await asAddressee(duckExpress).confirmDelivery(offerHash)
+        await expect(asAddressee(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+          'DuckExpress: invalid order status',
+        )
+      })
     })
 
-    it('reverts if the order was already delivered', async () => {
-      await asAddressee(duckExpress).refuseDelivery(offerHash)
-      await expect(asAddressee(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
-        'DuckExpress: invalid order status',
-      )
+    describe('main behaviour - after pick up', () => {
+      it('reverts if sender is not the addressee', async () => {
+        await expect(asCourier(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+          'DuckExpress: you are not the addressee of this order',
+        )
+      })
+
+      it('emits event', async () => {
+        await expect(asAddressee(duckExpress).refuseDelivery(offerHash))
+          .to.emit(duckExpress, 'DeliveryRefused')
+          .withArgs(addressee.address, courier.address, offerHash)
+      })
+
+      it('sets the order status', async () => {
+        await asAddressee(duckExpress).refuseDelivery(offerHash)
+        const order = await duckExpress.order(offerHash)
+        expect(order.status).to.eq(4)
+      })
     })
 
-    it('reverts if sender is not the addressee', async () => {
-      await expect(asCourier(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
-        'DuckExpress: you are not the addressee of this order',
-      )
-    })
+    describe('main behaviour - after addressee refusal', () => {
+      beforeEach(async () => {
+        await asAddressee(duckExpress).refuseDelivery(offerHash)
+      })
 
-    it('reverts if the offer has invalid status', async () => {
-      await asAddressee(duckExpress).refuseDelivery(offerHash)
-      await expect(asAddressee(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
-        'DuckExpress: invalid order status',
-      )
-    })
+      it('reverts if sender is not the customer', async () => {
+        await expect(asCourier(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+          'DuckExpress: you are not the creator of this offer',
+        )
+      })
 
-    it('emits event', async () => {
-      await expect(asAddressee(duckExpress).refuseDelivery(offerHash))
-        .to.emit(duckExpress, 'DeliveryRefused')
-        .withArgs(addressee.address, courier.address, offerHash)
-    })
+      it('emits event', async () => {
+        await expect(asCustomer(duckExpress).refuseDelivery(offerHash))
+          .to.emit(duckExpress, 'DeliveryFailed')
+          .withArgs(customer.address, courier.address, offerHash)
+      })
 
-    it('sets the order status', async () => {
-      await asAddressee(duckExpress).refuseDelivery(offerHash)
-      const order = await duckExpress.order(offerHash)
-      expect(order.status).to.eq(4)
+      it('sets the order status', async () => {
+        await asCustomer(duckExpress).refuseDelivery(offerHash)
+        const order = await duckExpress.order(offerHash)
+        expect(order.status).to.eq(5)
+      })
+
+      it('transfers reward and collateral from contract to the customer', async () => {
+        const customerBalanceBefore = await token.balanceOf(courier.address)
+
+        await asCustomer(duckExpress).confirmDelivery(offerHash)
+
+        const contractBalance = await token.balanceOf(duckExpress.address)
+        const customerBalance = await token.balanceOf(courier.address)
+        const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
+        const expectedCustomerBalance = rewardAndCollateral.add(customerBalanceBefore)
+
+        expect(contractBalance).to.eq(0)
+        expect(customerBalance).to.eq(expectedCustomerBalance)
+      })
     })
   })
 })
