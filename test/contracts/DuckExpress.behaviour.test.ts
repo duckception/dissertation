@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { MockProvider, loadFixture } from 'ethereum-waffle'
 import { BigNumber, Wallet, utils } from 'ethers'
+import sinon from 'sinon'
 import { DuckExpress, ERC20 } from '../../build'
 import { duckExpressFixture } from '../fixtures/duckExpressFixture'
 import { AsWalletFunction } from '../helpers/asWalletFactory'
@@ -42,9 +43,9 @@ describe.only('DuckExpress', () => {
       addresseeAddress: addressee.address,
       pickupAddress: 'Bulwarowa 20 Kraków 31-751',
       deliveryAddress: 'Opatowska 48 Warszawa 01-622',
-      deliveryTime: 12 * 3600,
+      deliveryTime: 2 * 24 * 3600, // 2 days
       tokenAddress: token.address,
-      reward: 1000,
+      reward: 1001,
       collateral: 2000,
     }
   }
@@ -155,7 +156,7 @@ describe.only('DuckExpress', () => {
       expect(order.offer.tokenAddress).to.eq(defaultParams.tokenAddress)
       expect(order.offer.reward).to.eq(defaultParams.reward)
       expect(order.offer.collateral).to.eq(defaultParams.collateral)
-      expect(order.status).to.eq(0)
+      expect(order.status).to.eq(0) // AWAITING_PICK_UP
       expect(order.courierAddress).to.eq(courier.address)
       expect(order.timestamp.gt(0)).to.be.true
     })
@@ -326,7 +327,7 @@ describe.only('DuckExpress', () => {
         await asCustomer(duckExpress).createDeliveryOffer(...params)
 
         const contractBalance = await token.balanceOf(duckExpress.address)
-        expect(contractBalance).to.eq(1000)
+        expect(contractBalance).to.eq(defaultParams.reward)
       })
 
       it('sets offer status', async () => {
@@ -406,7 +407,7 @@ describe.only('DuckExpress', () => {
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
 
       const order = await duckExpress.order(offerHash)
-      expect(order.status).to.eq(0)
+      expect(order.status).to.eq(0) // AWAITING_PICK_UP
       expect(order.courierAddress).to.eq(courier.address)
       expect(order.timestamp.gt(BigNumber.from(0))).to.be.true
     })
@@ -517,7 +518,7 @@ describe.only('DuckExpress', () => {
     it('sets the order status', async () => {
       await asCustomer(duckExpress).confirmPickUp(offerHash)
       const order = await duckExpress.order(offerHash)
-      expect(order.status).to.eq(1)
+      expect(order.status).to.eq(1) // PICKED_UP
     })
   })
 
@@ -564,24 +565,73 @@ describe.only('DuckExpress', () => {
           .withArgs(customer.address, addressee.address, courier.address, offerHash)
       })
 
-      it('sets the order status', async () => {
-        await asAddressee(duckExpress).confirmDelivery(offerHash)
-        const order = await duckExpress.order(offerHash)
-        expect(order.status).to.eq(2)
+      describe('tests not using sinon', () => {
+        it('sets the order status', async () => {
+          await asAddressee(duckExpress).confirmDelivery(offerHash)
+          const order = await duckExpress.order(offerHash)
+          expect(order.status).to.eq(2) // DELIVERED
+        })
+
+        it('transfers reward and collateral from contract to the courier', async () => {
+          const courierBalanceBefore = await token.balanceOf(courier.address)
+
+          await asAddressee(duckExpress).confirmDelivery(offerHash)
+
+          const contractBalance = await token.balanceOf(duckExpress.address)
+          const courierBalance = await token.balanceOf(courier.address)
+          const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
+          const expectedCourierBalance = rewardAndCollateral.add(courierBalanceBefore)
+
+          expect(contractBalance).to.eq(0)
+          expect(courierBalance).to.eq(expectedCourierBalance)
+        })
       })
 
-      it('transfers reward and collateral from contract to the courier', async () => {
-        const courierBalanceBefore = await token.balanceOf(courier.address)
+      describe('tests using sinon', () => {
+        let sinonClock: sinon.SinonFakeTimers
 
-        await asAddressee(duckExpress).confirmDelivery(offerHash)
+        beforeEach(async () => {
+          const date = new Date()
+          const forwardDays = 3
+          date.setDate(date.getDate() + forwardDays)
+          sinonClock = sinon.useFakeTimers({
+            now: date,
+            toFake: ['Date'],
+          })
+        })
 
-        const contractBalance = await token.balanceOf(duckExpress.address)
-        const courierBalance = await token.balanceOf(courier.address)
-        const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
-        const expectedCourierBalance = rewardAndCollateral.add(courierBalanceBefore)
+        afterEach(async () => {
+          sinonClock.restore()
+        })
 
-        expect(contractBalance).to.eq(0)
-        expect(courierBalance).to.eq(expectedCourierBalance)
+        it('sets the order status', async () => {
+          await asAddressee(duckExpress).confirmDelivery(offerHash)
+          const order = await duckExpress.order(offerHash)
+          expect(order.status).to.eq(3) // DELIVERED_LATE
+        })
+
+        it('transfers collateral to courier and divides reward tokens equally between customer and courier', async () => {
+          const courierBalanceBefore = await token.balanceOf(courier.address)
+          const customerBalanceBefore = await token.balanceOf(customer.address)
+
+          await asAddressee(duckExpress).confirmDelivery(offerHash)
+
+          const contractBalance = await token.balanceOf(duckExpress.address)
+          const courierBalance = await token.balanceOf(courier.address)
+          const customerBalance = await token.balanceOf(customer.address)
+
+          const customerReward = Math.floor(defaultParams.reward / 2)
+          const expectedCustomerBalance = BigNumber.from(customerReward).add(customerBalanceBefore)
+
+          const courierReward = Math.ceil(defaultParams.reward / 2)
+          const expectedCourierBalance = BigNumber.from(defaultParams.collateral)
+            .add(BigNumber.from(courierReward))
+            .add(courierBalanceBefore)
+
+          expect(contractBalance).to.eq(0)
+          expect(courierBalance).to.eq(expectedCourierBalance)
+          expect(customerBalance).to.eq(expectedCustomerBalance)
+        })
       })
     })
 
@@ -605,7 +655,7 @@ describe.only('DuckExpress', () => {
       it('sets the order status', async () => {
         await asCustomer(duckExpress).confirmDelivery(offerHash)
         const order = await duckExpress.order(offerHash)
-        expect(order.status).to.eq(7)
+        expect(order.status).to.eq(7) // RETURNED
       })
 
       it('transfers reward and collateral from contract to the courier', async () => {
@@ -670,7 +720,7 @@ describe.only('DuckExpress', () => {
       it('sets the order status', async () => {
         await asAddressee(duckExpress).refuseDelivery(offerHash)
         const order = await duckExpress.order(offerHash)
-        expect(order.status).to.eq(4)
+        expect(order.status).to.eq(4) // REFUSED
       })
     })
 
@@ -694,7 +744,7 @@ describe.only('DuckExpress', () => {
       it('sets the order status', async () => {
         await asCustomer(duckExpress).refuseDelivery(offerHash)
         const order = await duckExpress.order(offerHash)
-        expect(order.status).to.eq(5)
+        expect(order.status).to.eq(5) // FAILED
       })
 
       it('transfers reward and collateral from contract to the customer', async () => {

@@ -143,12 +143,28 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         if (order.status == OrderStatus.PICKED_UP) {
             require(order.offer.addresseeAddress == msg.sender, "DuckExpress: caller is not the offer addressee");
 
-            order.status = OrderStatus.DELIVERED;
+            bool isDeliveryLate = block.timestamp >= deliveryDeadline(offerHash);
+
+            if (isDeliveryLate) {
+                order.status = OrderStatus.DELIVERED_LATE;
+            } else {
+                order.status = OrderStatus.DELIVERED;
+            }
+
             _orders[offerHash] = order;
             IERC20 token = IERC20(order.offer.tokenAddress);
 
-            token.safeTransfer(order.courierAddress, order.offer.reward);
-            token.safeTransfer(order.courierAddress, order.offer.collateral);
+            if (isDeliveryLate) {
+                uint256 customerReward = order.offer.reward.div(2);
+                uint256 courierReward = order.offer.reward.sub(customerReward);
+
+                token.safeTransfer(order.courierAddress, courierReward);
+                token.safeTransfer(order.offer.customerAddress, customerReward);
+                token.safeTransfer(order.courierAddress, order.offer.collateral);
+            } else {
+                token.safeTransfer(order.courierAddress, order.offer.reward);
+                token.safeTransfer(order.courierAddress, order.offer.collateral);
+            }
 
             emit PackageDelivered(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
         } else {
