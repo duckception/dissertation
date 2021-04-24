@@ -347,47 +347,45 @@ describe.only('DuckExpress', () => {
       await asCustomer(duckExpress).createDeliveryOffer(...params)
     })
 
-    describe('main behaviour', () => {
-      it('reverts if the offer is invalid', async () => {
-        const invalidHash = utils.randomBytes(32)
-        await expect(asCourier(duckExpress).acceptDeliveryOffer(invalidHash)).to.be.revertedWith(
-          'DuckExpress: no offer with provided hash',
-        )
-      })
+    it('reverts if the offer is invalid', async () => {
+      const invalidHash = utils.randomBytes(32)
+      await expect(asCourier(duckExpress).acceptDeliveryOffer(invalidHash)).to.be.revertedWith(
+        'DuckExpress: no offer with provided hash',
+      )
+    })
 
-      it('reverts if the offer was canceled', async () => {
-        await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
-        await expect(asCourier(duckExpress).acceptDeliveryOffer(offerHash)).to.be.revertedWith(
-          'DuckExpress: the offer is unavailable',
-        )
-      })
+    it('reverts if the offer was canceled', async () => {
+      await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
+      await expect(asCourier(duckExpress).acceptDeliveryOffer(offerHash)).to.be.revertedWith(
+        'DuckExpress: the offer is unavailable',
+      )
+    })
 
-      it('emits event', async () => {
-        await expect(asCourier(duckExpress).acceptDeliveryOffer(offerHash))
-          .to.emit(duckExpress, 'DeliveryOfferAccepted')
-          .withArgs(courier.address, offerHash)
-      })
+    it('emits event', async () => {
+      await expect(asCourier(duckExpress).acceptDeliveryOffer(offerHash))
+        .to.emit(duckExpress, 'DeliveryOfferAccepted')
+        .withArgs(courier.address, offerHash)
+    })
 
-      it('sends collateral from courier to the contract', async () => {
-        const balanceBefore = await token.balanceOf(duckExpress.address)
-        await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-        const currentBalance = await token.balanceOf(duckExpress.address)
-        expect(currentBalance).to.eq(balanceBefore.add(defaultParams.collateral))
-      })
+    it('sends collateral from courier to the contract', async () => {
+      const balanceBefore = await token.balanceOf(duckExpress.address)
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+      const currentBalance = await token.balanceOf(duckExpress.address)
+      expect(currentBalance).to.eq(balanceBefore.add(defaultParams.collateral))
+    })
 
-      it('saves delivery order in the contract', async () => {
-        await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+    it('saves delivery order in the contract', async () => {
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
 
-        const order = await duckExpress.order(offerHash)
-        expect(order.status).to.eq(0)
-        expect(order.courierAddress).to.eq(courier.address)
-        expect(order.timestamp.gt(BigNumber.from(0))).to.be.true
-      })
+      const order = await duckExpress.order(offerHash)
+      expect(order.status).to.eq(0)
+      expect(order.courierAddress).to.eq(courier.address)
+      expect(order.timestamp.gt(BigNumber.from(0))).to.be.true
+    })
 
-      it('changes the offer status to accepted', async () => {
-        await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-        expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
-      })
+    it('changes the offer status to accepted', async () => {
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
     })
   })
 
@@ -403,44 +401,42 @@ describe.only('DuckExpress', () => {
       await asCustomer(duckExpress).createDeliveryOffer(...params)
     })
 
-    describe('main behaviour', () => {
-      it('reverts if the offer is invalid', async () => {
-        const invalidHash = utils.randomBytes(32)
-        await expect(asCustomer(duckExpress).cancelDeliveryOffer(invalidHash)).to.be.revertedWith(
-          'DuckExpress: no offer with provided hash',
-        )
-      })
+    it('reverts if the offer is invalid', async () => {
+      const invalidHash = utils.randomBytes(32)
+      await expect(asCustomer(duckExpress).cancelDeliveryOffer(invalidHash)).to.be.revertedWith(
+        'DuckExpress: no offer with provided hash',
+      )
+    })
 
-      it('reverts if the offer was already canceled', async () => {
-        await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
-        await expect(asCustomer(duckExpress).cancelDeliveryOffer(offerHash)).to.be.revertedWith(
-          'DuckExpress: the offer is unavailable',
-        )
-      })
+    it('reverts if the offer was already canceled', async () => {
+      await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
+      await expect(asCustomer(duckExpress).cancelDeliveryOffer(offerHash)).to.be.revertedWith(
+        'DuckExpress: the offer is unavailable',
+      )
+    })
 
-      it('reverts if sender is not the offer creator', async () => {
-        await expect(asCourier(duckExpress).cancelDeliveryOffer(offerHash)).to.be.revertedWith(
-          'DuckExpress: you are not the create of this offer',
-        )
-      })
+    it('reverts if sender is not the offer creator', async () => {
+      await expect(asCourier(duckExpress).cancelDeliveryOffer(offerHash)).to.be.revertedWith(
+        'DuckExpress: you are not the create of this offer',
+      )
+    })
 
-      it('emits event', async () => {
-        await expect(asCustomer(duckExpress).cancelDeliveryOffer(offerHash))
-          .to.emit(duckExpress, 'DeliveryOfferCanceled')
-          .withArgs(offerHash)
-      })
+    it('emits event', async () => {
+      await expect(asCustomer(duckExpress).cancelDeliveryOffer(offerHash))
+        .to.emit(duckExpress, 'DeliveryOfferCanceled')
+        .withArgs(offerHash)
+    })
 
-      it('cancels the delivery offer', async () => {
-        await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
-        await expect(asCourier(duckExpress).acceptDeliveryOffer(offerHash)).to.be.revertedWith(
-          'DuckExpress: the offer is unavailable',
-        )
-      })
+    it('cancels the delivery offer', async () => {
+      await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
+      await expect(asCourier(duckExpress).acceptDeliveryOffer(offerHash)).to.be.revertedWith(
+        'DuckExpress: the offer is unavailable',
+      )
+    })
 
-      it('sets correct offer status', async () => {
-        await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
-        expect(await asCourier(duckExpress).offerStatus(offerHash)).to.eq(3)
-      })
+    it('sets correct offer status', async () => {
+      await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
+      expect(await asCourier(duckExpress).offerStatus(offerHash)).to.eq(3)
     })
   })
 
@@ -457,45 +453,43 @@ describe.only('DuckExpress', () => {
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
     })
 
-    describe('main behaviour', () => {
-      it('reverts if there is no order with provided hash', async () => {
-        const invalidHash = utils.randomBytes(32)
-        await expect(asCustomer(duckExpress).confirmPickUp(invalidHash)).to.be.revertedWith(
-          'DuckExpress: no offer with provided hash',
-        )
-      })
+    it('reverts if there is no order with provided hash', async () => {
+      const invalidHash = utils.randomBytes(32)
+      await expect(asCustomer(duckExpress).confirmPickUp(invalidHash)).to.be.revertedWith(
+        'DuckExpress: no offer with provided hash',
+      )
+    })
 
-      it('reverts if the order was already picked up', async () => {
-        await asCustomer(duckExpress).confirmPickUp(offerHash)
-        await expect(asCustomer(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
-          'DuckExpress: invalid order status',
-        )
-      })
+    it('reverts if the order was already picked up', async () => {
+      await asCustomer(duckExpress).confirmPickUp(offerHash)
+      await expect(asCustomer(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
+        'DuckExpress: invalid order status',
+      )
+    })
 
-      it('reverts if sender is not the offer creator', async () => {
-        await expect(asCourier(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
-          'DuckExpress: you are not the create of this offer',
-        )
-      })
+    it('reverts if sender is not the offer creator', async () => {
+      await expect(asCourier(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
+        'DuckExpress: you are not the create of this offer',
+      )
+    })
 
-      it('reverts if the offer has invalid status', async () => {
-        await asCustomer(duckExpress).confirmPickUp(offerHash)
-        await expect(asCustomer(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
-          'DuckExpress: invalid order status',
-        )
-      })
+    it('reverts if the offer has invalid status', async () => {
+      await asCustomer(duckExpress).confirmPickUp(offerHash)
+      await expect(asCustomer(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
+        'DuckExpress: invalid order status',
+      )
+    })
 
-      it('emits event', async () => {
-        await expect(asCustomer(duckExpress).confirmPickUp(offerHash))
-          .to.emit(duckExpress, 'PackagePickedUp')
-          .withArgs(customer.address, courier.address, offerHash)
-      })
+    it('emits event', async () => {
+      await expect(asCustomer(duckExpress).confirmPickUp(offerHash))
+        .to.emit(duckExpress, 'PackagePickedUp')
+        .withArgs(customer.address, courier.address, offerHash)
+    })
 
-      it('sets the order status', async () => {
-        await asCustomer(duckExpress).confirmPickUp(offerHash)
-        const order = await duckExpress.order(offerHash)
-        expect(order.status).to.eq(1)
-      })
+    it('sets the order status', async () => {
+      await asCustomer(duckExpress).confirmPickUp(offerHash)
+      const order = await duckExpress.order(offerHash)
+      expect(order.status).to.eq(1)
     })
   })
 
