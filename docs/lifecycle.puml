@@ -99,8 +99,7 @@ else Courier fails to deliver the package in given time frame
       else Customer refuses to receive the returned goods
         customer -> contract: Refuse to receive the returned delivery
         activate contract
-        contract -> contract: Transfer 50% back reward tokens from the <b>Contract</b> to the <b>Courier</b>
-        contract -> contract: Transfer 50% back reward tokens from the <b>Contract</b> to the <b>Customer</b>
+        contract -> contract: Transfer back reward tokens from the <b>Contract</b> to the <b>Customer</b>
         contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Customer</b>
         return
       end
