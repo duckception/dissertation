@@ -9,6 +9,9 @@ import "./Ownable.sol";
 abstract contract DuckExpressConfig is DuckExpressStorage, Ownable {
     using EnumerableMap for EnumerableMap.AddressToSupportStateMap;
 
+    // uint256 _minDeliveryTime;
+    // EnumerableMap.AddressToSupportStateMap _tokens;
+
     event MinDeliveryTimeSet(uint256 indexed time);
     event TokenSupported(address indexed tokenAddress);
     event TokenSupportStopped(address indexed tokenAddress);

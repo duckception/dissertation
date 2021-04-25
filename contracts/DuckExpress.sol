@@ -20,9 +20,10 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     using EnumerableMap for EnumerableMap.HashToOfferStatusMap;
     using EnumerableMap for EnumerableMap.AddressToSupportStateMap;
 
-    // TODO: MOVE VARIABLES HERE
-    // EnumerableMap.HashToOfferStatusMap internal _offerStatuses;
-    // mapping (bytes32 => Offer) internal _offers;
+    // mapping (address => uint256) _nonces;
+    // EnumerableMap.HashToOfferStatusMap _offerStatuses;
+    // mapping (bytes32 => Offer) _offers;
+    // mapping (bytes32 => Order) _orders;
 
     modifier onlyCustomer(bytes32 offerHash) {
         Offer storage offer = _offers[offerHash];

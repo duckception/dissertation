@@ -14,9 +14,6 @@ abstract contract DuckExpressStorage is OfferModel, OrderModel {
     // Ownable.sol
     address internal _owner;
 
-    // EIP712Domain.sol
-    bytes32 internal DOMAIN_SEPARATOR; // solhint-disable-line var-name-mixedcase
-
     // DuckExpress.sol
     uint256 internal _minDeliveryTime;
     EnumerableMap.AddressToSupportStateMap internal _tokens;
