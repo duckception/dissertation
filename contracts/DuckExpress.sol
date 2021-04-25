@@ -55,6 +55,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     event PackageReturned(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
     event DeliveryRefused(address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
     event DeliveryFailed(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
+    event CollateralClaimed(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
 
     // INITIALIZERS
 
@@ -207,7 +208,22 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         }
     }
 
-    // claim collateral
+    function claimCollateral(bytes32 offerHash) external onlyCustomer(offerHash) {
+        require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
+        Order storage order = _orders[offerHash];
+        require(order.offer.customerAddress == msg.sender, "DuckExpress: caller is not the offer creator");
+        require(order.status == OrderStatus.PICKED_UP, "DuckExpress: invalid order status");
+        require(block.timestamp >= deliveryDeadline(offerHash), "DuckExpress: the delivery time has not passed yet");
+
+        order.status = OrderStatus.CLAIMED;
+        _orders[offerHash] = order;
+        IERC20 token = IERC20(order.offer.tokenAddress);
+
+        token.safeTransfer(order.offer.customerAddress, order.offer.reward);
+        token.safeTransfer(order.offer.customerAddress, order.offer.collateral);
+
+        emit CollateralClaimed(order.offer.customerAddress, order.courierAddress, offerHash);
+    }
 
     // HELPERS
 

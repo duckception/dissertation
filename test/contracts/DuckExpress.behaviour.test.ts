@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { MockProvider, loadFixture } from 'ethereum-waffle'
+import { loadFixture } from 'ethereum-waffle'
 import { BigNumber, Wallet, utils } from 'ethers'
 import sinon from 'sinon'
 import { DuckExpress, ERC20 } from '../../build'
@@ -9,8 +9,7 @@ import { createDeliveryOfferParams, DeliveryOfferParams } from '../helpers/creat
 import { hashOffer } from '../helpers/hashOffer'
 import { randomAddress } from '../helpers/randomAddress'
 
-describe.only('DuckExpress', () => {
-  let provider: MockProvider
+describe('DuckExpress', () => {
   let duckExpress: DuckExpress
   let token: ERC20
   let customer: Wallet
@@ -22,7 +21,6 @@ describe.only('DuckExpress', () => {
 
   beforeEach(async () => {
     ({
-      provider,
       duckExpress,
       token,
       customer,
@@ -754,6 +752,87 @@ describe.only('DuckExpress', () => {
 
         const contractBalance = await token.balanceOf(duckExpress.address)
         const customerBalance = await token.balanceOf(courier.address)
+        const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
+        const expectedCustomerBalance = rewardAndCollateral.add(customerBalanceBefore)
+
+        expect(contractBalance).to.eq(0)
+        expect(customerBalance).to.eq(expectedCustomerBalance)
+      })
+    })
+  })
+
+  describe('claimCollateral', () => {
+    let offerHash: string
+    let defaultParams: DeliveryOfferParams
+
+    beforeEach(async () => {
+      defaultParams = getDefaultParams()
+      const params = await createDeliveryOfferParams(defaultParams)
+      offerHash = hashOffer(params[0])
+      await prepareDuckExpress()
+      await asCustomer(duckExpress).createDeliveryOffer(...params)
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
+      await asCustomer(duckExpress).confirmPickUp(offerHash)
+    })
+
+    describe('validation', () => {
+      it('reverts if there is no order with provided hash or the caller is not the customer', async () => {
+        const invalidHash = utils.randomBytes(32)
+        await expect(asCustomer(duckExpress).claimCollateral(invalidHash)).to.be.revertedWith(
+          'DuckExpress: caller is not the offer creator',
+        )
+      })
+
+      it('reverts if the order was already delivered or was declined', async () => {
+        await asAddressee(duckExpress).confirmDelivery(offerHash)
+        await expect(asCustomer(duckExpress).claimCollateral(offerHash)).to.be.revertedWith(
+          'DuckExpress: invalid order status',
+        )
+      })
+
+      it('reverts if the delivery deadline has not passed yet', async () => {
+        await expect(asCustomer(duckExpress).claimCollateral(offerHash)).to.be.revertedWith(
+          'DuckExpress: the delivery time has not passed yet',
+        )
+      })
+    })
+
+    describe('tests using sinon', () => {
+      let sinonClock: sinon.SinonFakeTimers
+
+      beforeEach(async () => {
+        const date = new Date()
+        const forwardDays = 3
+        date.setDate(date.getDate() + forwardDays)
+        sinonClock = sinon.useFakeTimers({
+          now: date,
+          toFake: ['Date'],
+        })
+      })
+
+      afterEach(async () => {
+        sinonClock.restore()
+      })
+
+      it('emits event', async () => {
+        await expect(asCustomer(duckExpress).claimCollateral(offerHash))
+          .to.emit(duckExpress, 'CollateralClaimed')
+          .withArgs(customer.address, courier.address, offerHash)
+      })
+
+      it('sets the order status', async () => {
+        await asCustomer(duckExpress).claimCollateral(offerHash)
+        const order = await duckExpress.order(offerHash)
+        expect(order.status).to.eq(6) // CLAIMED
+      })
+
+      it('transfers reward and collateral from contract to the courier', async () => {
+        const customerBalanceBefore = await token.balanceOf(customer.address)
+
+        await asCustomer(duckExpress).claimCollateral(offerHash)
+
+        const contractBalance = await token.balanceOf(duckExpress.address)
+        const customerBalance = await token.balanceOf(customer.address)
         const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
         const expectedCustomerBalance = rewardAndCollateral.add(customerBalanceBefore)
 
