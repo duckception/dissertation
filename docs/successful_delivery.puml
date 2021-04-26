@@ -1,0 +1,40 @@
+@startuml
+title Duck Express - the app lifecycle (successful delivery)
+
+participant "Addressee" as addressee
+participant "Customer" as customer
+participant "Contract" as contract
+participant "Courier" as courier
+
+customer -> contract: Create a delivery order
+activate contract
+contract -> contract: Transfer reward tokens from the <b>Customer</b> to the <b>Contract</b>
+contract -> customer: Get order's hash (identification purpose)
+deactivate
+
+courier -> contract: Browse all available delivery orders
+activate contract
+return
+
+courier -> contract: Accept a delivery order
+activate contract
+contract -> contract: Transfer collateral tokens from the <b>Courier</b> to the <b>Contract</b>
+return
+
+courier -> customer: Pick up the delivery goods
+activate customer
+customer -> contract: Confirm pick up
+activate contract
+return
+return
+
+courier -> addressee: Deliver the goods
+activate addressee
+addressee -> contract: Confirm delivery
+activate contract
+contract -> contract: Transfer reward tokens from the <b>Contract</b> to the <b>Courier</b>
+contract -> contract: Transfer collateral tokens from the <b>Contract</b> to the <b>Courier</b>
+return
+return
+
+@enduml
