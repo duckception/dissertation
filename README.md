@@ -16,18 +16,18 @@ To compile the project you need to run the following command:
 yarn build
 ```
 
-Once the contract are compiled you can run the test suite by running:
+Once the contracts are compiled, you can run the test suite by running:
 ```shell
 yarn test
 ```
 
-No additional configuration is required. All compilation products will be placed in `/build` directory.
+No additional configuration is required. All compilation products will be placed in the `/build` directory.
 
 ## ✅ Checks
 
 There are two checks that can be run on this codebase.
 
-First and most important one is already mentioned test suite, which can run by using `yarn test` command. Additionally you can check tests' type safety by running this command:
+First and most important one is the already mentioned test suite, which can run by using `yarn test` command. Additionally you can check type safety of the tests by running:
 ```shell
 yarn typecheck
 ```
@@ -39,7 +39,7 @@ It checks code of both tests and smart contracts.
 
 ## 🚀 Deployment
 
-The deployment of the Duck Express system is done in the following way. First the implementation of the `DuckExpress` contract is deployed. Then the OpenZeppelin's proxy is deployed. Afterwards, the script calls `supportToken` method for all tokens from the deployment configuration. In the final step, the script calls `transferOwnership` method and transfers it to a proxy admin specified in the deployment configuration.
+The deployment of the Duck Express system is done in the following way. First, the implementation of the `DuckExpress` contract is deployed. Then the OpenZeppelin's proxy is deployed. Afterwards, the script calls the `supportToken` method for all tokens from the deployment configuration. In the final step, the script calls the `transferOwnership` method and transfers it to a proxy admin specified in the deployment configuration.
 
 ## 📡 Deployment on Rinkeby testnet
 
