@@ -3,6 +3,7 @@ import { loadFixture } from 'ethereum-waffle'
 import { BigNumber, Wallet, utils } from 'ethers'
 import sinon from 'sinon'
 import { DuckExpress, ERC20 } from '../../build'
+import { Offer } from '../../src/models/Offer'
 import { duckExpressFixture } from '../fixtures/duckExpressFixture'
 import { AsWalletFunction } from '../helpers/asWalletFactory'
 import { createDeliveryOfferParams, DeliveryOfferParams } from '../helpers/createDeliveryOfferParams'
@@ -87,6 +88,46 @@ describe('DuckExpress', () => {
     it('returns correct canceled status', async () => {
       await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
       expect(await duckExpress.offerStatus(offerHash)).to.eq(3)
+    })
+  })
+
+  describe('offers', () => {
+    let offerHash1: string
+    let offerHash2: string
+    let defaultParams1: DeliveryOfferParams
+    let defaultParams2: DeliveryOfferParams
+    let params1: readonly [Offer]
+    let params2: readonly [Offer]
+
+    beforeEach(async () => {
+      defaultParams1 = getDefaultParams()
+      params1 = await createDeliveryOfferParams(defaultParams1)
+      defaultParams2 = defaultParams1
+      defaultParams2.customerAddress = courier.address
+      defaultParams2.addresseeAddress = customer.address
+      defaultParams2.reward = 5750
+      params2 = await createDeliveryOfferParams(defaultParams2)
+      offerHash1 = hashOffer(params1[0])
+      offerHash2 = hashOffer(params2[0])
+      await prepareDuckExpress()
+    })
+
+    it('returns empty array if no offers were created', async () => {
+      const offers = await duckExpress.offers()
+      expect(offers).to.be.of.length(0)
+    })
+
+    it('returns correct offers with correct statuses', async () => {
+      await asCustomer(duckExpress).createDeliveryOffer(...params1)
+      await asCourier(duckExpress).createDeliveryOffer(...params2)
+      await asCourier(duckExpress).acceptDeliveryOffer(offerHash1)
+
+      const offers = await duckExpress.offers()
+      expect(offers).to.be.of.length(2)
+      expect(offers[0].offerHash).to.eq(offerHash1)
+      expect(offers[0].offerStatus).to.eq(2)
+      expect(offers[1].offerHash).to.eq(offerHash2)
+      expect(offers[1].offerStatus).to.eq(1)
     })
   })
 
