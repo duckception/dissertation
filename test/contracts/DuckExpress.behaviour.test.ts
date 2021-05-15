@@ -787,12 +787,12 @@ describe('DuckExpress', () => {
       })
 
       it('transfers reward and collateral from contract to the customer', async () => {
-        const customerBalanceBefore = await token.balanceOf(courier.address)
+        const customerBalanceBefore = await token.balanceOf(customer.address)
 
-        await asCustomer(duckExpress).confirmDelivery(offerHash)
+        await asCustomer(duckExpress).refuseDelivery(offerHash)
 
         const contractBalance = await token.balanceOf(duckExpress.address)
-        const customerBalance = await token.balanceOf(courier.address)
+        const customerBalance = await token.balanceOf(customer.address)
         const rewardAndCollateral = BigNumber.from(defaultParams.reward + defaultParams.collateral)
         const expectedCustomerBalance = rewardAndCollateral.add(customerBalanceBefore)
 
