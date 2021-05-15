@@ -159,12 +159,10 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
                 uint256 customerReward = order.offer.reward.div(2);
                 uint256 courierReward = order.offer.reward.sub(customerReward);
 
-                token.safeTransfer(order.courierAddress, courierReward);
+                token.safeTransfer(order.courierAddress, courierReward + order.offer.collateral);
                 token.safeTransfer(order.offer.customerAddress, customerReward);
-                token.safeTransfer(order.courierAddress, order.offer.collateral);
             } else {
-                token.safeTransfer(order.courierAddress, order.offer.reward);
-                token.safeTransfer(order.courierAddress, order.offer.collateral);
+                token.safeTransfer(order.courierAddress, order.offer.reward + order.offer.collateral);
             }
 
             emit PackageDelivered(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
@@ -175,8 +173,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
             _orders[offerHash] = order;
             IERC20 token = IERC20(order.offer.tokenAddress);
 
-            token.safeTransfer(order.courierAddress, order.offer.reward);
-            token.safeTransfer(order.courierAddress, order.offer.collateral);
+            token.safeTransfer(order.courierAddress, order.offer.reward + order.offer.collateral);
 
             emit PackageReturned(order.offer.customerAddress, order.courierAddress, offerHash);
         }
@@ -201,8 +198,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
             _orders[offerHash] = order;
             IERC20 token = IERC20(order.offer.tokenAddress);
 
-            token.safeTransfer(order.offer.customerAddress, order.offer.reward);
-            token.safeTransfer(order.offer.customerAddress, order.offer.collateral);
+            token.safeTransfer(order.offer.customerAddress, order.offer.reward + order.offer.collateral);
 
             emit DeliveryFailed(order.offer.customerAddress, order.courierAddress, offerHash);
         }
@@ -219,8 +215,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         _orders[offerHash] = order;
         IERC20 token = IERC20(order.offer.tokenAddress);
 
-        token.safeTransfer(order.offer.customerAddress, order.offer.reward);
-        token.safeTransfer(order.offer.customerAddress, order.offer.collateral);
+        token.safeTransfer(order.offer.customerAddress, order.offer.reward + order.offer.collateral);
 
         emit CollateralClaimed(order.offer.customerAddress, order.courierAddress, offerHash);
     }
