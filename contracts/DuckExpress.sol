@@ -13,6 +13,7 @@ import "./DuckExpressStorage.sol";
 import "./DuckExpressConfig.sol";
 import "./models/OrderModel.sol";
 import "./models/OfferModel.sol";
+import "./utils/EnumerableMap.sol";
 
 contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializable, Ownable, DuckExpressConfig {
     using SafeMath for uint256;
@@ -45,7 +46,6 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
 
         _;
     }
-
 
     event DeliveryOfferCreated(address indexed customerAddress, bytes32 offerHash);
     event DeliveryOfferAccepted(address indexed courierAddress, bytes32 offerHash);
@@ -257,6 +257,25 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
     function offerStatus(bytes32 offerHash) public view returns (EnumerableMap.OfferStatus) {
         require(_offerStatuses.contains(offerHash), "DuckExpress: no offer with provided hash");
         return _offerStatuses.get(offerHash);
+    }
+
+    function offers() public view returns (EnumerableMap.HashWithOfferStatus[] memory) {
+        uint256 offersTotal = EnumerableMap.length(_offerStatuses);
+
+        EnumerableMap.HashWithOfferStatus[] memory allOffers = new EnumerableMap.HashWithOfferStatus[](offersTotal);
+
+        for (uint256 i = 0; i < offersTotal; i++) {
+            bytes32 currentHash;
+            EnumerableMap.OfferStatus currentStatus;
+            (currentHash, currentStatus) = EnumerableMap.at(_offerStatuses, i);
+            EnumerableMap.HashWithOfferStatus memory newOffer = EnumerableMap.HashWithOfferStatus({
+                offerHash: currentHash,
+                offerStatus: currentStatus
+            });
+            allOffers[i] = newOffer;
+        }
+
+        return allOffers;
     }
 
     function offer(bytes32 offerHash) external view returns (Offer memory) {
