@@ -47,14 +47,14 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         _;
     }
 
-    event DeliveryOfferCreated(address indexed customerAddress, bytes32 offerHash);
-    event DeliveryOfferAccepted(address indexed courierAddress, bytes32 offerHash);
-    event DeliveryOfferCanceled(bytes32 indexed offerHash);
-    event PackagePickedUp(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
-    event PackageDelivered(address indexed customerAddress, address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
-    event PackageReturned(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
-    event DeliveryRefused(address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
-    event DeliveryFailed(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
+    event DeliveryOfferCreated(address indexed customerAddress, address indexed addresseeAddress, bytes32 offerHash);
+    event DeliveryOfferAccepted(address indexed customerAddress, address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
+    event DeliveryOfferCanceled(address indexed customerAddress, address indexed addresseeAddress, bytes32 offerHash);
+    event PackagePickedUp(address indexed customerAddress, address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
+    event PackageDelivered(address indexed addresseeAddress, address indexed courierAddress, bytes32 indexed offerHash);
+    event PackageReturned(address indexed customerAddress, address indexed courierAddress, bytes32 indexed offerHash);
+    event DeliveryRefused(address indexed customerAddress, address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
+    event DeliveryFailed(address indexed customerAddress, address indexed addresseeAddress, address indexed courierAddress, bytes32 offerHash);
     event CollateralClaimed(address indexed customerAddress, address indexed courierAddress, bytes32 offerHash);
 
     // INITIALIZERS
@@ -94,7 +94,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         _offers[offerHash] = offer;
         _nonces[msg.sender] += 1;
 
-        emit DeliveryOfferCreated(msg.sender, offerHash);
+        emit DeliveryOfferCreated(msg.sender, offer.addresseeAddress, offerHash);
     }
 
     function acceptDeliveryOffer(bytes32 offerHash) external {
@@ -113,7 +113,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
             timestamp: block.timestamp
         });
 
-        emit DeliveryOfferAccepted(msg.sender, offerHash);
+        emit DeliveryOfferAccepted(offer.customerAddress, offer.addresseeAddress, msg.sender, offerHash);
     }
 
     function cancelDeliveryOffer(bytes32 offerHash) external onlyCustomer(offerHash) {
@@ -121,7 +121,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
 
         _offerStatuses.set(offerHash, EnumerableMap.OfferStatus.CANCELED);
 
-        emit DeliveryOfferCanceled(offerHash);
+        emit DeliveryOfferCanceled(msg.sender, _offers[offerHash].addresseeAddress, offerHash);
     }
 
     function confirmPickUp(bytes32 offerHash) external onlyCustomer(offerHash) {
@@ -133,7 +133,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         order.status = OrderStatus.PICKED_UP;
         _orders[offerHash] = order;
 
-        emit PackagePickedUp(msg.sender, order.courierAddress, offerHash);
+        emit PackagePickedUp(msg.sender, order.offer.addresseeAddress, order.courierAddress, offerHash);
     }
 
     function confirmDelivery(bytes32 offerHash) external onlyCustomerOrAddressee(offerHash) {
@@ -165,7 +165,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
                 token.safeTransfer(order.courierAddress, order.offer.reward + order.offer.collateral);
             }
 
-            emit PackageDelivered(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
+            emit PackageDelivered(order.offer.addresseeAddress, order.courierAddress, offerHash);
         } else {
             require(order.offer.customerAddress == msg.sender, "DuckExpress: caller is not the offer creator");
 
@@ -190,7 +190,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
             order.status = OrderStatus.REFUSED;
             _orders[offerHash] = order;
 
-            emit DeliveryRefused(order.offer.addresseeAddress, order.courierAddress, offerHash);
+            emit DeliveryRefused(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
         } else {
             require(order.offer.customerAddress == msg.sender, "DuckExpress: caller is not the offer creator");
 
@@ -200,7 +200,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
 
             token.safeTransfer(order.offer.customerAddress, order.offer.reward + order.offer.collateral);
 
-            emit DeliveryFailed(order.offer.customerAddress, order.courierAddress, offerHash);
+            emit DeliveryFailed(order.offer.customerAddress, order.offer.addresseeAddress, order.courierAddress, offerHash);
         }
     }
 
