@@ -360,7 +360,7 @@ describe('DuckExpress', () => {
         const offerHash = hashOffer(params[0])
         await expect(asCustomer(duckExpress).createDeliveryOffer(...params))
           .to.emit(duckExpress, 'DeliveryOfferCreated')
-          .withArgs(customer.address, offerHash)
+          .withArgs(customer.address, addressee.address, offerHash)
       })
 
       it('transfers reward tokens from customer to the contract', async () => {
@@ -434,7 +434,7 @@ describe('DuckExpress', () => {
     it('emits event', async () => {
       await expect(asCourier(duckExpress).acceptDeliveryOffer(offerHash))
         .to.emit(duckExpress, 'DeliveryOfferAccepted')
-        .withArgs(courier.address, offerHash)
+        .withArgs(customer.address, addressee.address, courier.address, offerHash)
     })
 
     it('sends collateral from courier to the contract', async () => {
@@ -494,7 +494,7 @@ describe('DuckExpress', () => {
     it('emits event', async () => {
       await expect(asCustomer(duckExpress).cancelDeliveryOffer(offerHash))
         .to.emit(duckExpress, 'DeliveryOfferCanceled')
-        .withArgs(offerHash)
+        .withArgs(customer.address, addressee.address, offerHash)
     })
 
     it('cancels the delivery offer', async () => {
@@ -565,7 +565,7 @@ describe('DuckExpress', () => {
         gasLimit: DEFAULT_GAS_LIMIT,
       }))
         .to.emit(duckExpress, 'PackagePickedUp')
-        .withArgs(customer.address, courier.address, offerHash)
+        .withArgs(customer.address, addressee.address, courier.address, offerHash)
     })
 
     it('sets the order status', async () => {
@@ -656,7 +656,7 @@ describe('DuckExpress', () => {
           gasLimit: DEFAULT_GAS_LIMIT,
         }))
           .to.emit(duckExpress, 'PackageDelivered')
-          .withArgs(customer.address, addressee.address, courier.address, offerHash)
+          .withArgs(addressee.address, courier.address, offerHash)
       })
 
       describe('tests not using sinon', () => {
@@ -878,7 +878,7 @@ describe('DuckExpress', () => {
           gasLimit: DEFAULT_GAS_LIMIT,
         }))
           .to.emit(duckExpress, 'DeliveryRefused')
-          .withArgs(addressee.address, courier.address, offerHash)
+          .withArgs(customer.address, addressee.address, courier.address, offerHash)
       })
 
       it('sets the order status', async () => {
@@ -939,7 +939,7 @@ describe('DuckExpress', () => {
           gasLimit: DEFAULT_GAS_LIMIT,
         }))
           .to.emit(duckExpress, 'DeliveryFailed')
-          .withArgs(customer.address, courier.address, offerHash)
+          .withArgs(customer.address, addressee.address, courier.address, offerHash)
       })
 
       it('sets the order status', async () => {
