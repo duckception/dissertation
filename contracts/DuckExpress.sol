@@ -110,7 +110,8 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
             offer: offer,
             status: OrderStatus.AWAITING_PICK_UP,
             courierAddress: msg.sender,
-            timestamp: block.timestamp
+            creationTimestamp: block.timestamp,
+            lastUpdateTimestamp: block.timestamp
         });
 
         emit DeliveryOfferAccepted(offer.customerAddress, offer.addresseeAddress, msg.sender, offerHash);
@@ -131,6 +132,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         require(order.status == OrderStatus.AWAITING_PICK_UP, "DuckExpress: invalid order status");
 
         order.status = OrderStatus.PICKED_UP;
+        order.lastUpdateTimestamp = block.timestamp;
         _orders[offerHash] = order;
 
         emit PackagePickedUp(msg.sender, order.offer.addresseeAddress, order.courierAddress, offerHash);
@@ -140,6 +142,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
         Order storage order = _orders[offerHash];
         require(order.status == OrderStatus.PICKED_UP || order.status == OrderStatus.REFUSED, "DuckExpress: invalid order status");
+        order.lastUpdateTimestamp = block.timestamp;
 
         if (order.status == OrderStatus.PICKED_UP) {
             require(order.offer.addresseeAddress == msg.sender, "DuckExpress: caller is not the offer addressee");
@@ -183,6 +186,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: the offer is unavailable");
         Order storage order = _orders[offerHash];
         require(order.status == OrderStatus.PICKED_UP || order.status == OrderStatus.REFUSED, "DuckExpress: invalid order status");
+        order.lastUpdateTimestamp = block.timestamp;
 
         if (order.status == OrderStatus.PICKED_UP) {
             require(order.offer.addresseeAddress == msg.sender, "DuckExpress: caller is not the offer addressee");
@@ -212,6 +216,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         require(block.timestamp >= deliveryDeadline(offerHash), "DuckExpress: the delivery time has not passed yet");
 
         order.status = OrderStatus.CLAIMED;
+        order.lastUpdateTimestamp = block.timestamp;
         _orders[offerHash] = order;
         IERC20 token = IERC20(order.offer.tokenAddress);
 
@@ -246,7 +251,7 @@ contract DuckExpress is OfferModel, OrderModel, DuckExpressStorage, Initializabl
         require(offerStatus(offerHash) == EnumerableMap.OfferStatus.ACCEPTED, "DuckExpress: no order with provided hash");
         Order storage _order = _orders[offerHash];
 
-        return _order.timestamp.add(_order.offer.deliveryTime);
+        return _order.creationTimestamp.add(_order.offer.deliveryTime);
     }
 
     function offerStatus(bytes32 offerHash) public view returns (EnumerableMap.OfferStatus) {

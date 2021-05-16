@@ -10,6 +10,8 @@ import { createDeliveryOfferParams, DeliveryOfferParams } from '../helpers/creat
 import { hashOffer } from '../helpers/hashOffer'
 import { randomAddress } from '../helpers/randomAddress'
 
+const DEFAULT_GAS_LIMIT = 200_000
+
 describe('DuckExpress', () => {
   let duckExpress: DuckExpress
   let token: ERC20
@@ -75,19 +77,19 @@ describe('DuckExpress', () => {
     })
 
     it('returns correct available status', async () => {
-      expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(0)
 
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
     })
 
     it('returns correct accepted status', async () => {
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-      expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
     })
 
     it('returns correct canceled status', async () => {
       await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
-      expect(await duckExpress.offerStatus(offerHash)).to.eq(3)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
     })
   })
 
@@ -125,9 +127,9 @@ describe('DuckExpress', () => {
       const offers = await duckExpress.offers()
       expect(offers).to.be.of.length(2)
       expect(offers[0].offerHash).to.eq(offerHash1)
-      expect(offers[0].offerStatus).to.eq(2)
+      expect(offers[0].offerStatus).to.eq(1)
       expect(offers[1].offerHash).to.eq(offerHash2)
-      expect(offers[1].offerStatus).to.eq(1)
+      expect(offers[1].offerStatus).to.eq(0)
     })
   })
 
@@ -197,7 +199,7 @@ describe('DuckExpress', () => {
       expect(order.offer.collateral).to.eq(defaultParams.collateral)
       expect(order.status).to.eq(0) // AWAITING_PICK_UP
       expect(order.courierAddress).to.eq(courier.address)
-      expect(order.timestamp.gt(0)).to.be.true
+      expect(order.creationTimestamp.gt(0)).to.be.true
     })
   })
 
@@ -231,7 +233,7 @@ describe('DuckExpress', () => {
 
     it('returns correct delivery deadline', async () => {
       const order = await duckExpress.order(offerHash)
-      const expectedDeadline = BigNumber.from(defaultParams.deliveryTime).add(order.timestamp)
+      const expectedDeadline = BigNumber.from(defaultParams.deliveryTime).add(order.creationTimestamp)
       const deadline = await duckExpress.deliveryDeadline(offerHash)
       expect(deadline).to.eq(expectedDeadline)
     })
@@ -374,7 +376,7 @@ describe('DuckExpress', () => {
         const offerHash = hashOffer(params[0])
         await asCustomer(duckExpress).createDeliveryOffer(...params)
 
-        expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
+        expect(await duckExpress.offerStatus(offerHash)).to.eq(0)
       })
 
       it('saves offer in the contract', async () => {
@@ -448,12 +450,12 @@ describe('DuckExpress', () => {
       const order = await duckExpress.order(offerHash)
       expect(order.status).to.eq(0) // AWAITING_PICK_UP
       expect(order.courierAddress).to.eq(courier.address)
-      expect(order.timestamp.gt(BigNumber.from(0))).to.be.true
+      expect(order.creationTimestamp.gt(BigNumber.from(0))).to.be.true
     })
 
     it('changes the offer status to accepted', async () => {
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-      expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
     })
   })
 
@@ -504,7 +506,7 @@ describe('DuckExpress', () => {
 
     it('sets correct offer status', async () => {
       await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
-      expect(await asCourier(duckExpress).offerStatus(offerHash)).to.eq(3)
+      expect(await asCourier(duckExpress).offerStatus(offerHash)).to.eq(2)
     })
   })
 
@@ -529,35 +531,78 @@ describe('DuckExpress', () => {
     })
 
     it('reverts if the order was already picked up', async () => {
-      await asCustomer(duckExpress).confirmPickUp(offerHash)
-      await expect(asCustomer(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
+      await asCustomer(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      })
+      await expect(asCustomer(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      })).to.be.revertedWith(
         'DuckExpress: invalid order status',
       )
     })
 
     it('reverts if sender is not the offer creator', async () => {
-      await expect(asCourier(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
+      await expect(asCourier(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      })).to.be.revertedWith(
         'DuckExpress: caller is not the offer creator',
       )
     })
 
     it('reverts if the offer has invalid status', async () => {
-      await asCustomer(duckExpress).confirmPickUp(offerHash)
-      await expect(asCustomer(duckExpress).confirmPickUp(offerHash)).to.be.revertedWith(
+      await asCustomer(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      })
+      await expect(asCustomer(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      })).to.be.revertedWith(
         'DuckExpress: invalid order status',
       )
     })
 
     it('emits event', async () => {
-      await expect(asCustomer(duckExpress).confirmPickUp(offerHash))
+      await expect(asCustomer(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      }))
         .to.emit(duckExpress, 'PackagePickedUp')
         .withArgs(customer.address, addressee.address, courier.address, offerHash)
     })
 
     it('sets the order status', async () => {
-      await asCustomer(duckExpress).confirmPickUp(offerHash)
+      await asCustomer(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      })
       const order = await duckExpress.order(offerHash)
       expect(order.status).to.eq(1) // PICKED_UP
+    })
+
+    describe('tests using sinon', () => {
+      let sinonClock: sinon.SinonFakeTimers
+      let date: Date
+
+      beforeEach(async () => {
+        date = new Date()
+        sinonClock = sinon.useFakeTimers({
+          now: date,
+          toFake: ['Date'],
+        })
+      })
+
+      afterEach(async () => {
+        sinonClock.restore()
+      })
+
+      it('updates the last updated timestamp', async () => {
+        const orderBeforeUpdate = await duckExpress.order(offerHash)
+
+        sinonClock.tick(60_000) // 1 minute
+
+        await asCustomer(duckExpress).confirmPickUp(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
+        const order = await duckExpress.order(offerHash)
+        expect(order.lastUpdateTimestamp.gt(orderBeforeUpdate.lastUpdateTimestamp)).to.be.true
+      })
     })
   })
 
@@ -572,7 +617,9 @@ describe('DuckExpress', () => {
       await prepareDuckExpress()
       await asCustomer(duckExpress).createDeliveryOffer(...params)
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-      await asCustomer(duckExpress).confirmPickUp(offerHash)
+      await asCustomer(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      })
     })
 
     describe('validation', () => {
@@ -584,8 +631,12 @@ describe('DuckExpress', () => {
       })
 
       it('reverts if the order was already delivered or was not picked up yet', async () => {
-        await asAddressee(duckExpress).confirmDelivery(offerHash)
-        await expect(asAddressee(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+        await asAddressee(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
+        await expect(asAddressee(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })).to.be.revertedWith(
           'DuckExpress: invalid order status',
         )
       })
@@ -593,20 +644,26 @@ describe('DuckExpress', () => {
 
     describe('main behaviour - after pick up', () => {
       it('reverts if sender is not the addressee', async () => {
-        await expect(asCustomer(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+        await expect(asCustomer(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })).to.be.revertedWith(
           'DuckExpress: caller is not the offer addressee',
         )
       })
 
       it('emits event', async () => {
-        await expect(asAddressee(duckExpress).confirmDelivery(offerHash))
+        await expect(asAddressee(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        }))
           .to.emit(duckExpress, 'PackageDelivered')
           .withArgs(addressee.address, courier.address, offerHash)
       })
 
       describe('tests not using sinon', () => {
         it('sets the order status', async () => {
-          await asAddressee(duckExpress).confirmDelivery(offerHash)
+          await asAddressee(duckExpress).confirmDelivery(offerHash, {
+            gasLimit: DEFAULT_GAS_LIMIT,
+          })
           const order = await duckExpress.order(offerHash)
           expect(order.status).to.eq(2) // DELIVERED
         })
@@ -614,7 +671,9 @@ describe('DuckExpress', () => {
         it('transfers reward and collateral from contract to the courier', async () => {
           const courierBalanceBefore = await token.balanceOf(courier.address)
 
-          await asAddressee(duckExpress).confirmDelivery(offerHash)
+          await asAddressee(duckExpress).confirmDelivery(offerHash, {
+            gasLimit: DEFAULT_GAS_LIMIT,
+          })
 
           const contractBalance = await token.balanceOf(duckExpress.address)
           const courierBalance = await token.balanceOf(courier.address)
@@ -628,10 +687,11 @@ describe('DuckExpress', () => {
 
       describe('tests using sinon', () => {
         let sinonClock: sinon.SinonFakeTimers
+        let date: Date
 
         beforeEach(async () => {
-          const date = new Date()
           const forwardDays = 3
+          date = new Date()
           date.setDate(date.getDate() + forwardDays)
           sinonClock = sinon.useFakeTimers({
             now: date,
@@ -644,7 +704,9 @@ describe('DuckExpress', () => {
         })
 
         it('sets the order status', async () => {
-          await asAddressee(duckExpress).confirmDelivery(offerHash)
+          await asAddressee(duckExpress).confirmDelivery(offerHash, {
+            gasLimit: DEFAULT_GAS_LIMIT,
+          })
           const order = await duckExpress.order(offerHash)
           expect(order.status).to.eq(3) // DELIVERED_LATE
         })
@@ -653,7 +715,9 @@ describe('DuckExpress', () => {
           const courierBalanceBefore = await token.balanceOf(courier.address)
           const customerBalanceBefore = await token.balanceOf(customer.address)
 
-          await asAddressee(duckExpress).confirmDelivery(offerHash)
+          await asAddressee(duckExpress).confirmDelivery(offerHash, {
+            gasLimit: DEFAULT_GAS_LIMIT,
+          })
 
           const contractBalance = await token.balanceOf(duckExpress.address)
           const courierBalance = await token.balanceOf(courier.address)
@@ -671,28 +735,48 @@ describe('DuckExpress', () => {
           expect(courierBalance).to.eq(expectedCourierBalance)
           expect(customerBalance).to.eq(expectedCustomerBalance)
         })
+
+        it('updates the last updated timestamp', async () => {
+          const orderBeforeUpdate = await duckExpress.order(offerHash)
+
+          sinonClock.tick(60_000) // 1 minute
+
+          await asAddressee(duckExpress).confirmDelivery(offerHash, {
+            gasLimit: DEFAULT_GAS_LIMIT,
+          })
+          const order = await duckExpress.order(offerHash)
+          expect(order.lastUpdateTimestamp.gt(orderBeforeUpdate.lastUpdateTimestamp)).to.be.true
+        })
       })
     })
 
     describe('main behaviour - after addressee refusal', () => {
       beforeEach(async () => {
-        await asAddressee(duckExpress).refuseDelivery(offerHash)
+        await asAddressee(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
       })
 
       it('reverts if sender is not the customer', async () => {
-        await expect(asAddressee(duckExpress).confirmDelivery(offerHash)).to.be.revertedWith(
+        await expect(asAddressee(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })).to.be.revertedWith(
           'DuckExpress: caller is not the offer creator',
         )
       })
 
       it('emits event', async () => {
-        await expect(asCustomer(duckExpress).confirmDelivery(offerHash))
+        await expect(asCustomer(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        }))
           .to.emit(duckExpress, 'PackageReturned')
           .withArgs(customer.address, courier.address, offerHash)
       })
 
       it('sets the order status', async () => {
-        await asCustomer(duckExpress).confirmDelivery(offerHash)
+        await asCustomer(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
         const order = await duckExpress.order(offerHash)
         expect(order.status).to.eq(7) // RETURNED
       })
@@ -700,7 +784,9 @@ describe('DuckExpress', () => {
       it('transfers reward and collateral from contract to the courier', async () => {
         const courierBalanceBefore = await token.balanceOf(courier.address)
 
-        await asCustomer(duckExpress).confirmDelivery(offerHash)
+        await asCustomer(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
 
         const contractBalance = await token.balanceOf(duckExpress.address)
         const courierBalance = await token.balanceOf(courier.address)
@@ -709,6 +795,35 @@ describe('DuckExpress', () => {
 
         expect(contractBalance).to.eq(0)
         expect(courierBalance).to.eq(expectedCourierBalance)
+      })
+
+      describe('tests using sinon', () => {
+        let sinonClock: sinon.SinonFakeTimers
+        let date: Date
+
+        beforeEach(async () => {
+          date = new Date()
+          sinonClock = sinon.useFakeTimers({
+            now: date,
+            toFake: ['Date'],
+          })
+        })
+
+        afterEach(async () => {
+          sinonClock.restore()
+        })
+
+        it('updates the last updated timestamp', async () => {
+          const orderBeforeUpdate = await duckExpress.order(offerHash)
+
+          sinonClock.tick(60_000) // 1 minute
+
+          await asCustomer(duckExpress).confirmDelivery(offerHash, {
+            gasLimit: DEFAULT_GAS_LIMIT,
+          })
+          const order = await duckExpress.order(offerHash)
+          expect(order.lastUpdateTimestamp.gt(orderBeforeUpdate.lastUpdateTimestamp)).to.be.true
+        })
       })
     })
   })
@@ -724,7 +839,9 @@ describe('DuckExpress', () => {
       await prepareDuckExpress()
       await asCustomer(duckExpress).createDeliveryOffer(...params)
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-      await asCustomer(duckExpress).confirmPickUp(offerHash)
+      await asCustomer(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      })
     })
 
     describe('validation', () => {
@@ -736,8 +853,12 @@ describe('DuckExpress', () => {
       })
 
       it('reverts if the order was already delivered or was not picked up yet', async () => {
-        await asAddressee(duckExpress).confirmDelivery(offerHash)
-        await expect(asAddressee(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+        await asAddressee(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
+        await expect(asAddressee(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })).to.be.revertedWith(
           'DuckExpress: invalid order status',
         )
       })
@@ -745,43 +866,86 @@ describe('DuckExpress', () => {
 
     describe('main behaviour - after pick up', () => {
       it('reverts if sender is not the addressee', async () => {
-        await expect(asCustomer(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+        await expect(asCustomer(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })).to.be.revertedWith(
           'DuckExpress: caller is not the offer addressee',
         )
       })
 
       it('emits event', async () => {
-        await expect(asAddressee(duckExpress).refuseDelivery(offerHash))
+        await expect(asAddressee(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        }))
           .to.emit(duckExpress, 'DeliveryRefused')
           .withArgs(customer.address, addressee.address, courier.address, offerHash)
       })
 
       it('sets the order status', async () => {
-        await asAddressee(duckExpress).refuseDelivery(offerHash)
+        await asAddressee(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
         const order = await duckExpress.order(offerHash)
         expect(order.status).to.eq(4) // REFUSED
+      })
+
+      describe('tests using sinon', () => {
+        let sinonClock: sinon.SinonFakeTimers
+        let date: Date
+
+        beforeEach(async () => {
+          date = new Date()
+          sinonClock = sinon.useFakeTimers({
+            now: date,
+            toFake: ['Date'],
+          })
+        })
+
+        afterEach(async () => {
+          sinonClock.restore()
+        })
+
+        it('updates the last updated timestamp', async () => {
+          const orderBeforeUpdate = await duckExpress.order(offerHash)
+
+          sinonClock.tick(60_000) // 1 minute
+
+          await asAddressee(duckExpress).refuseDelivery(offerHash, {
+            gasLimit: DEFAULT_GAS_LIMIT,
+          })
+          const order = await duckExpress.order(offerHash)
+          expect(order.lastUpdateTimestamp.gt(orderBeforeUpdate.lastUpdateTimestamp)).to.be.true
+        })
       })
     })
 
     describe('main behaviour - after addressee refusal', () => {
       beforeEach(async () => {
-        await asAddressee(duckExpress).refuseDelivery(offerHash)
+        await asAddressee(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
       })
 
       it('reverts if sender is not the customer', async () => {
-        await expect(asAddressee(duckExpress).refuseDelivery(offerHash)).to.be.revertedWith(
+        await expect(asAddressee(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })).to.be.revertedWith(
           'caller is not the offer creator',
         )
       })
 
       it('emits event', async () => {
-        await expect(asCustomer(duckExpress).refuseDelivery(offerHash))
+        await expect(asCustomer(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        }))
           .to.emit(duckExpress, 'DeliveryFailed')
           .withArgs(customer.address, addressee.address, courier.address, offerHash)
       })
 
       it('sets the order status', async () => {
-        await asCustomer(duckExpress).refuseDelivery(offerHash)
+        await asCustomer(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
         const order = await duckExpress.order(offerHash)
         expect(order.status).to.eq(5) // FAILED
       })
@@ -789,7 +953,9 @@ describe('DuckExpress', () => {
       it('transfers reward and collateral from contract to the customer', async () => {
         const customerBalanceBefore = await token.balanceOf(customer.address)
 
-        await asCustomer(duckExpress).refuseDelivery(offerHash)
+        await asCustomer(duckExpress).refuseDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
 
         const contractBalance = await token.balanceOf(duckExpress.address)
         const customerBalance = await token.balanceOf(customer.address)
@@ -798,6 +964,35 @@ describe('DuckExpress', () => {
 
         expect(contractBalance).to.eq(0)
         expect(customerBalance).to.eq(expectedCustomerBalance)
+      })
+
+      describe('tests using sinon', () => {
+        let sinonClock: sinon.SinonFakeTimers
+        let date: Date
+
+        beforeEach(async () => {
+          date = new Date()
+          sinonClock = sinon.useFakeTimers({
+            now: date,
+            toFake: ['Date'],
+          })
+        })
+
+        afterEach(async () => {
+          sinonClock.restore()
+        })
+
+        it('updates the last updated timestamp', async () => {
+          const orderBeforeUpdate = await duckExpress.order(offerHash)
+
+          sinonClock.tick(60_000) // 1 minute
+
+          await asCustomer(duckExpress).refuseDelivery(offerHash, {
+            gasLimit: DEFAULT_GAS_LIMIT,
+          })
+          const order = await duckExpress.order(offerHash)
+          expect(order.lastUpdateTimestamp.gt(orderBeforeUpdate.lastUpdateTimestamp)).to.be.true
+        })
       })
     })
   })
@@ -813,7 +1008,9 @@ describe('DuckExpress', () => {
       await prepareDuckExpress()
       await asCustomer(duckExpress).createDeliveryOffer(...params)
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-      await asCustomer(duckExpress).confirmPickUp(offerHash)
+      await asCustomer(duckExpress).confirmPickUp(offerHash, {
+        gasLimit: DEFAULT_GAS_LIMIT,
+      })
     })
 
     describe('validation', () => {
@@ -825,14 +1022,20 @@ describe('DuckExpress', () => {
       })
 
       it('reverts if the order was already delivered or was declined', async () => {
-        await asAddressee(duckExpress).confirmDelivery(offerHash)
-        await expect(asCustomer(duckExpress).claimCollateral(offerHash)).to.be.revertedWith(
+        await asAddressee(duckExpress).confirmDelivery(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
+        await expect(asCustomer(duckExpress).claimCollateral(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })).to.be.revertedWith(
           'DuckExpress: invalid order status',
         )
       })
 
       it('reverts if the delivery deadline has not passed yet', async () => {
-        await expect(asCustomer(duckExpress).claimCollateral(offerHash)).to.be.revertedWith(
+        await expect(asCustomer(duckExpress).claimCollateral(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })).to.be.revertedWith(
           'DuckExpress: the delivery time has not passed yet',
         )
       })
@@ -840,10 +1043,11 @@ describe('DuckExpress', () => {
 
     describe('tests using sinon', () => {
       let sinonClock: sinon.SinonFakeTimers
+      let date: Date
 
       beforeEach(async () => {
-        const date = new Date()
         const forwardDays = 3
+        date = new Date()
         date.setDate(date.getDate() + forwardDays)
         sinonClock = sinon.useFakeTimers({
           now: date,
@@ -856,13 +1060,17 @@ describe('DuckExpress', () => {
       })
 
       it('emits event', async () => {
-        await expect(asCustomer(duckExpress).claimCollateral(offerHash))
+        await expect(asCustomer(duckExpress).claimCollateral(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        }))
           .to.emit(duckExpress, 'CollateralClaimed')
           .withArgs(customer.address, courier.address, offerHash)
       })
 
       it('sets the order status', async () => {
-        await asCustomer(duckExpress).claimCollateral(offerHash)
+        await asCustomer(duckExpress).claimCollateral(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
         const order = await duckExpress.order(offerHash)
         expect(order.status).to.eq(6) // CLAIMED
       })
@@ -870,7 +1078,9 @@ describe('DuckExpress', () => {
       it('transfers reward and collateral from contract to the courier', async () => {
         const customerBalanceBefore = await token.balanceOf(customer.address)
 
-        await asCustomer(duckExpress).claimCollateral(offerHash)
+        await asCustomer(duckExpress).claimCollateral(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
 
         const contractBalance = await token.balanceOf(duckExpress.address)
         const customerBalance = await token.balanceOf(customer.address)
@@ -879,6 +1089,18 @@ describe('DuckExpress', () => {
 
         expect(contractBalance).to.eq(0)
         expect(customerBalance).to.eq(expectedCustomerBalance)
+      })
+
+      it('updates the last updated timestamp', async () => {
+        const orderBeforeUpdate = await duckExpress.order(offerHash)
+
+        sinonClock.tick(60_000) // 1 minute
+
+        await asCustomer(duckExpress).claimCollateral(offerHash, {
+          gasLimit: DEFAULT_GAS_LIMIT,
+        })
+        const order = await duckExpress.order(offerHash)
+        expect(order.lastUpdateTimestamp.gt(orderBeforeUpdate.lastUpdateTimestamp)).to.be.true
       })
     })
   })
