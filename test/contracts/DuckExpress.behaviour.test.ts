@@ -77,19 +77,19 @@ describe('DuckExpress', () => {
     })
 
     it('returns correct available status', async () => {
-      expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(0)
 
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
     })
 
     it('returns correct accepted status', async () => {
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-      expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
     })
 
     it('returns correct canceled status', async () => {
       await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
-      expect(await duckExpress.offerStatus(offerHash)).to.eq(3)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
     })
   })
 
@@ -127,9 +127,9 @@ describe('DuckExpress', () => {
       const offers = await duckExpress.offers()
       expect(offers).to.be.of.length(2)
       expect(offers[0].offerHash).to.eq(offerHash1)
-      expect(offers[0].offerStatus).to.eq(2)
+      expect(offers[0].offerStatus).to.eq(1)
       expect(offers[1].offerHash).to.eq(offerHash2)
-      expect(offers[1].offerStatus).to.eq(1)
+      expect(offers[1].offerStatus).to.eq(0)
     })
   })
 
@@ -376,7 +376,7 @@ describe('DuckExpress', () => {
         const offerHash = hashOffer(params[0])
         await asCustomer(duckExpress).createDeliveryOffer(...params)
 
-        expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
+        expect(await duckExpress.offerStatus(offerHash)).to.eq(0)
       })
 
       it('saves offer in the contract', async () => {
@@ -455,7 +455,7 @@ describe('DuckExpress', () => {
 
     it('changes the offer status to accepted', async () => {
       await asCourier(duckExpress).acceptDeliveryOffer(offerHash)
-      expect(await duckExpress.offerStatus(offerHash)).to.eq(2)
+      expect(await duckExpress.offerStatus(offerHash)).to.eq(1)
     })
   })
 
@@ -506,7 +506,7 @@ describe('DuckExpress', () => {
 
     it('sets correct offer status', async () => {
       await asCustomer(duckExpress).cancelDeliveryOffer(offerHash)
-      expect(await asCourier(duckExpress).offerStatus(offerHash)).to.eq(3)
+      expect(await asCourier(duckExpress).offerStatus(offerHash)).to.eq(2)
     })
   })
 
