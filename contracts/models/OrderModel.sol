@@ -20,6 +20,7 @@ abstract contract OrderModel is OfferModel {
         Offer offer;
         OrderStatus status;
         address courierAddress;
-        uint256 timestamp;
+        uint256 creationTimestamp;
+        uint256 lastUpdateTimestamp;
     }
 }
