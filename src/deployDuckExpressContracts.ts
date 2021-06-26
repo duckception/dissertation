@@ -6,7 +6,7 @@ import { waitForTx } from './utils/waitForTx'
 export async function deployDuckExpressContracts(
   deployer: Wallet,
   config: DeploymentConfig,
-): Promise<[string, string]> {
+) {
   console.log('Starting deployment of Duck Express contracts:')
 
   const [duckExpressProxy, duckExpressProxyAddress, duckExpressImplAddress] = await deployDuckExpressBehindProxy(
@@ -20,10 +20,10 @@ export async function deployDuckExpressContracts(
 
   await duckExpressProxy.transferOwnership(config.duckExpressOwner)
 
-  return [
+  return {
     duckExpressProxyAddress,
     duckExpressImplAddress,
-  ]
+  }
 }
 
 async function supportTokens(duckExpress: DuckExpress, tokens: string[]) {

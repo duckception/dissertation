@@ -28,8 +28,9 @@ void (async () => {
   config.duckExpressConfig.supportedTokens = [
     token.address,
   ]
-  const [duckExpressAddress] = await deployDuckExpressContracts(deployer, config)
 
+  const contractAddresses = await deployDuckExpressContracts(deployer, config)
+  const duckExpressAddress = contractAddresses.duckExpressProxyAddress
   const duckExpress = DuckExpress__factory.connect(duckExpressAddress, deployer)
 
   const [
