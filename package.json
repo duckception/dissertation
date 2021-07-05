@@ -13,7 +13,7 @@
     "lint": "yarn lint:ts && yarn lint:sol",
     "lint:fix": "yarn lint:ts --fix && yarn lint:sol --fix",
     "lint:sol": "solhint 'contracts/**/*.sol'",
-    "lint:ts": "eslint --ext .ts src test",
+    "lint:ts": "eslint --ext .ts src test examples",
     "prebuild": "yarn clean",
     "precompile": "yarn clean:contracts",
     "precompile:native": "yarn clean:contracts",

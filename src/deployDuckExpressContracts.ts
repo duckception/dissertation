@@ -53,7 +53,7 @@ async function deployDuckExpress(deployer: Wallet, owner: string): Promise<DuckE
   const duckExpress = await factory.deploy(owner)
   await duckExpress.deployed()
 
-  console.log(`DuckExpress implementation deployed at ${duckExpress.address}`)
+  console.log(`Duck Express implementation contract deployed at ${duckExpress.address}`)
 
   return duckExpress
 }
@@ -68,7 +68,7 @@ async function deployDuckExpressBehindProxy(
   const initializeCall = duckExpress.interface.encodeFunctionData('initialize', [deployer.address, minDeliveryTime])
   const proxy = await deployProxy(deployer, duckExpress.address, proxyAdminAddress, initializeCall)
 
-  console.log(`DuckExpress proxy deployed at ${proxy.address}`)
+  console.log(`Duck Express proxy contract deployed at ${proxy.address}`)
 
   return [DuckExpress__factory.connect(proxy.address, deployer), proxy.address, duckExpress.address]
 }
