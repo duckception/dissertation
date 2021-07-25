@@ -7,7 +7,7 @@ import { INFURA_API_KEY } from './constants'
 const config: Config = {
   readOnlyChainId: ChainId.Rinkeby,
   readOnlyUrls: {
-    [ChainId.Mainnet]: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
+    [ChainId.Rinkeby]: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
   },
 }
 
