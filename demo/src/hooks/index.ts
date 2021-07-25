@@ -1,16 +1,11 @@
-import { ethers } from "ethers";
-import { useContractCall } from "@usedapp/core";
+import { Contract } from "ethers";
+import { useContractFunction } from "@usedapp/core";
 import duckExpressJSON from "../contracts/DuckExpress.json";
 import { DUCK_EXPRESS_CONTRACT_ADDRESS } from "../constants"
 
-const duckExpressInterface = new ethers.utils.Interface(duckExpressJSON.abi);
+const contract = new Contract(DUCK_EXPRESS_CONTRACT_ADDRESS, duckExpressJSON.abi);
 
-export function useOffers() {
-  const offers: string[] = useContractCall({
-    abi: duckExpressInterface,
-    address: DUCK_EXPRESS_CONTRACT_ADDRESS,
-    method: "offers",
-    args: [],
-  }) ?? [];
-  return offers;
+export function useContractMethod(methodName: string) {
+  const { state, send } = useContractFunction(contract, methodName, {});
+  return { state, send };
 }

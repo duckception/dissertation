@@ -11,6 +11,7 @@ export default function Layout({ children }: Props) {
       flexDirection="column"
       alignItems="center"
       justifyContent="center"
+      color="white"
       h="100vh"
       bg="gray.800"
     >
