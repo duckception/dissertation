@@ -1,11 +1,12 @@
 import { ChakraProvider } from "@chakra-ui/react";
+import ConnectButton from "./components/ConnectButton";
 import Layout from "./components/Layout";
 
 export default function App() {
   return (
     <ChakraProvider>
       <Layout>
-        <p style={{ color: "white" }}>Hello, world!</p>
+        <ConnectButton />
       </Layout>
     </ChakraProvider>
   )
