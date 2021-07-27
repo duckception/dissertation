@@ -6,13 +6,20 @@ interface OfferItemProps {
   offer: OffersOffer
 }
 
+function parseOfferStatus(status: number) {
+  const statuses = [
+    "AVAILABLE",
+    "ACCEPTED",
+    "CANCELED"
+  ]
+
+  return statuses[status]
+}
+
 export default function OfferItem(props: OfferItemProps ) {
   return (
-    props.offer.offerStatus === 0 ?
-      <ListItem key={props.key} fontSize={14}>
-        {props.offer.offerHash}
-      </ListItem>
-    :
-    <></>
+    <ListItem key={props.key} fontSize={14}>
+      <b>[{parseOfferStatus(props.offer.offerStatus)}]</b>{"\t\t\t\t" + props.offer.offerHash}
+    </ListItem>
   );
 }

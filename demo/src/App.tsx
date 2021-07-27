@@ -29,7 +29,7 @@ const App = () => {
               <p>Addressee</p>
             </TabPanel>
             <TabPanel>
-              <Heading as="h3">Available offers</Heading>
+              <Heading as="h3">Offers</Heading>
               <Divider />
               <Offers />
             </TabPanel>
