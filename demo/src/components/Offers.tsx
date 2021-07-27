@@ -1,12 +1,11 @@
-import { List, ListItem, Text } from "@chakra-ui/react";
-import { useOffers } from "../hooks/offers";
+import { List } from "@chakra-ui/react";
+import { useOffers, OffersOffer } from "../hooks/offers";
+import OfferItem from "./OfferItem";
 
-const listOffers = (offers: string[]) => {
+const listOffers = (offers: OffersOffer[]) => {
   return offers.map((offer, i) => {
     return (
-      <ListItem key={i} fontSize={14}>
-        {offer}
-      </ListItem>
+      <OfferItem key={i} offer={offer} />
     )
   })
 }
@@ -19,6 +18,6 @@ export default function Offers() {
         {listOffers(offers)}
       </List>
     :
-      <Text>No available offers found</Text>
+      <></>
   );
 }
