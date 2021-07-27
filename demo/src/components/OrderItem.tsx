@@ -66,15 +66,3 @@ export default function OrderItem(props: OrderItemProps) {
     </>
   );
 }
-
-// const config = {
-//   nonce: 0,
-//   customerAddress: customer,
-//   addresseeAddress: addressee,
-//   pickupAddress: utils.formatBytes32String('Bulwarowa 20 Kraków 31-751'),
-//   deliveryAddress: utils.formatBytes32String('Opatowska 48 Warszawa 01-622'),
-//   deliveryTime: 2 * 24 * 3600, // 2 days
-//   tokenAddress: DAI,
-//   reward: utils.parseEther('10').toString(),
-//   collateral: utils.parseEther('20').toString(),
-// }
