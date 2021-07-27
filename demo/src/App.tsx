@@ -2,8 +2,9 @@ import { ChakraProvider, Tabs, TabList, Tab, TabPanels, TabPanel, Heading, Divid
 import ConnectButton from "./components/ConnectButton";
 import Layout from "./components/Layout";
 import Offers from "./components/Offers"
+import Order from "./components/Order";
 
-export default function App() {
+const App = () => {
   return (
     <ChakraProvider>
       <Layout>
@@ -33,7 +34,8 @@ export default function App() {
               <Offers />
             </TabPanel>
             <TabPanel>
-              <p>Order</p>
+              <p>Check the order</p>
+              <Order />
             </TabPanel>
           </TabPanels>
         </Tabs>
@@ -41,3 +43,5 @@ export default function App() {
     </ChakraProvider>
   )
 }
+
+export default App;

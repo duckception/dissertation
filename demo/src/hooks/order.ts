@@ -1,13 +1,13 @@
 import { useContractCall } from "@usedapp/core";
-import { duckExpressInterface } from ".";
+import { duckExpressInterface } from "../hooks";
 import { DUCK_EXPRESS_CONTRACT_ADDRESS } from "../constants"
 
-export function useOffers() {
-  const offers: string[] = useContractCall({
+export function useOrder(orderHash: string) {
+  const order = useContractCall({
     abi: duckExpressInterface,
     address: DUCK_EXPRESS_CONTRACT_ADDRESS,
-    method: "offers",
-    args: [],
+    method: "order",
+    args: [orderHash],
   }) ?? [];
-  return offers;
+  return order;
 }
