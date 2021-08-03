@@ -3,6 +3,7 @@ import ConnectButton from "./components/ConnectButton";
 import Layout from "./components/Layout";
 import Offers from "./components/Offers"
 import Order from "./components/Order";
+import Customer from "./components/Customer"
 
 const App = () => {
   return (
@@ -23,7 +24,7 @@ const App = () => {
               <p>Courier</p>
             </TabPanel>
             <TabPanel>
-              <p>Customer</p>
+              <Customer />
             </TabPanel>
             <TabPanel>
               <p>Addressee</p>

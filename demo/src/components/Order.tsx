@@ -14,7 +14,6 @@ export default function Order() {
         value={orderHash}
         onChange={handleChange}
         placeholder="Type in the order hash here..."
-        size="sm"
       />
       <br /><br />
       {order.length > 0 ?
