@@ -5,6 +5,7 @@ import Offers from "./components/Offers"
 import Order from "./components/Order";
 import Customer from "./components/Customer"
 import Offer from './components/Offer'
+import Courier from './components/Courier'
 
 const App = () => {
   return (
@@ -23,7 +24,7 @@ const App = () => {
 
           <TabPanels>
             <TabPanel>
-              <p>Courier</p>
+              <Courier />
             </TabPanel>
             <TabPanel>
               <Customer />
