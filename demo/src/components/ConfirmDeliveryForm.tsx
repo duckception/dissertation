@@ -2,14 +2,14 @@ import { Box, Button, Input, Stack, Text } from '@chakra-ui/react'
 import { useState } from 'react'
 import { useContractMethod } from '../hooks'
 
-interface RefuseDeliveryFormProps {
+interface ConfirmDeliveryFormProps {
   buttonText: string,
 }
 
-export default function RefuseDeliveryForm(props: RefuseDeliveryFormProps) {
+export default function ConfirmDeliveryForm(props: ConfirmDeliveryFormProps) {
   const [orderHash, setOrderHash] = useState('')
   const handleChange = (event: any) => setOrderHash(event.target.value)
-  const { send } = useContractMethod('refuseDelivery')
+  const { send } = useContractMethod('confirmDelivery')
 
   const handleAction = async () => {
     await send(orderHash)

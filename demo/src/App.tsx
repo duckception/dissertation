@@ -6,6 +6,7 @@ import Order from "./components/Order";
 import Customer from "./components/Customer"
 import Offer from './components/Offer'
 import Courier from './components/Courier'
+import Addressee from './components/Addressee'
 
 const App = () => {
   return (
@@ -30,7 +31,7 @@ const App = () => {
               <Customer />
             </TabPanel>
             <TabPanel>
-              <p>Addressee</p>
+              <Addressee />
             </TabPanel>
             <TabPanel>
               <Heading as="h3">Offers</Heading>
