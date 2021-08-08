@@ -15,8 +15,8 @@ export default function CreateDeliveryOrderForm() {
     setOffer(newOffer)
   }
 
-  const handleCreate = () => {
-    send(offer)
+  const handleCreate = async () => {
+    await send(offer)
   }
 
   return (
