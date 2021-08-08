@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Flex } from "@chakra-ui/react";
+import type { ReactNode } from 'react'
+import { Flex } from '@chakra-ui/react'
 
 type Props = {
   children?: ReactNode;
@@ -8,12 +8,12 @@ type Props = {
 export default function Layout({ children }: Props) {
   return (
     <Flex
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      color="white"
-      h="100vh"
-      bg="gray.800"
+      flexDirection='column'
+      alignItems='center'
+      justifyContent='center'
+      color='white'
+      h='100vh'
+      bg='gray.800'
     >
       {children}
     </Flex>

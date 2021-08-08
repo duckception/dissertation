@@ -1,9 +1,9 @@
-import { ChakraProvider, Tabs, TabList, Tab, TabPanels, TabPanel, Heading, Divider } from "@chakra-ui/react";
-import ConnectButton from "./components/ConnectButton";
-import Layout from "./components/Layout";
-import Offers from "./components/Offers"
-import Order from "./components/Order";
-import Customer from "./components/Customer"
+import { ChakraProvider, Divider, Heading, Tab, TabList, TabPanel, TabPanels, Tabs } from '@chakra-ui/react'
+import ConnectButton from './components/ConnectButton'
+import Layout from './components/Layout'
+import Offers from './components/Offers'
+import Order from './components/Order'
+import Customer from './components/Customer'
 import Offer from './components/Offer'
 import Courier from './components/Courier'
 import Addressee from './components/Addressee'
@@ -34,7 +34,7 @@ const App = () => {
               <Addressee />
             </TabPanel>
             <TabPanel>
-              <Heading as="h3">Offers</Heading>
+              <Heading as='h3'>Offers</Heading>
               <Divider />
               <Offers />
             </TabPanel>
@@ -53,4 +53,4 @@ const App = () => {
   )
 }
 
-export default App;
+export default App

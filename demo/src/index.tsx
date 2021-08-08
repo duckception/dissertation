@@ -1,14 +1,14 @@
-import React from "react";
-import ReactDOM from "react-dom";
-import App from "./App"
-import { ChainId, DAppProvider, Config } from '@usedapp/core'
+import React from 'react'
+import ReactDOM from 'react-dom'
+import App from './App'
+import { ChainId, Config, DAppProvider } from '@usedapp/core'
 import { INFURA_API_KEY } from './constants'
 
 const config: Config = {
   readOnlyChainId: ChainId.Rinkeby,
   readOnlyUrls: {
-    [ChainId.Rinkeby]: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
-  },
+    [ChainId.Rinkeby]: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`
+  }
 }
 
 ReactDOM.render(
@@ -17,5 +17,5 @@ ReactDOM.render(
       <App />
     </DAppProvider>
   </React.StrictMode>,
-  document.getElementById("root")
-);
+  document.getElementById('root')
+)
