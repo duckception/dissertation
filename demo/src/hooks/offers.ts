@@ -15,16 +15,20 @@ export function useOffers() {
     args: [],
   }) ?? [];
 
+  if (rawOffers.length !== 1) {
+    return []
+  }
+
   const offers: OffersOffer[] = []
 
-  for (let i = 0; i < rawOffers.length; i++) {
-    const element = rawOffers[i][0];
+  for (let i = 0; i < rawOffers[0].length; i++) {
+    const element = rawOffers[0][i];
 
     offers.push({
       offerHash: element[0],
       offerStatus: element[1]
     })
   }
-  
+
   return offers;
 }

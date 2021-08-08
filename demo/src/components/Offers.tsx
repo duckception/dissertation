@@ -5,7 +5,7 @@ import OfferItem from "./OfferItem";
 const listOffers = (offers: OffersOffer[]) => {
   return offers.map((offer, i) => {
     return (
-      <OfferItem key={i} offer={offer} />
+      <OfferItem key={i} propKey={i} offer={offer} />
     )
   })
 }

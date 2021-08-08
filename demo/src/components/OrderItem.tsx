@@ -1,25 +1,6 @@
-import { Text } from "@chakra-ui/react";
-import { BigNumber, utils } from "ethers";
-
-interface Offer {
-  nonce: BigNumber,
-  customerAddress: string,
-  addresseeAddress: string,
-  pickupAddress: string,
-  deliveryAddress: string,
-  deliveryTime: BigNumber,
-  tokenAddress: string,
-  reward: BigNumber,
-  collateral: BigNumber,
-}
-
-interface Order {
-  offer: Offer
-  status: number
-  courierAddress: string
-  creationTimestamp: string
-  lastUpdateTimestamp: string
-}
+import { Text } from '@chakra-ui/react'
+import { utils } from 'ethers'
+import { Order } from '../models/order'
 
 interface OrderItemProps {
   order: Order
@@ -27,20 +8,19 @@ interface OrderItemProps {
 
 function parseOrderStatus(status: number) {
   const statuses = [
-    "AWAITING_PICK_UP",
-    "PICKED_UP",
-    "DELIVERED",
-    "DELIVERED_LATE",
-    "REFUSED",
-    "FAILED",
-    "CLAIMED",
-    "RETURNED"
+    'AWAITING_PICK_UP',
+    'PICKED_UP',
+    'DELIVERED',
+    'DELIVERED_LATE',
+    'REFUSED',
+    'FAILED',
+    'CLAIMED',
+    'RETURNED'
   ]
 
   return statuses[status]
 }
 
-//0x4c549ccc8b2bc2401083fd160e8ec416c457ed3b70396ed3170ca1bf775e8e87
 export default function OrderItem(props: OrderItemProps) {
   const offer = props.order.offer
   const order = props.order
@@ -64,5 +44,5 @@ export default function OrderItem(props: OrderItemProps) {
       <Text><b>Reward: </b> {utils.formatEther(offer.reward)} tokens</Text>
       <Text><b>Collateral: </b> {utils.formatEther(offer.collateral)} tokens</Text>
     </>
-  );
+  )
 }
