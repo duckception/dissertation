@@ -1,11 +1,11 @@
 import { List } from "@chakra-ui/react";
 import { useOffers, OffersOffer } from "../hooks/offers";
-import OfferItem from "./OfferItem";
+import OffersItem from "./OffersItem";
 
 const listOffers = (offers: OffersOffer[]) => {
   return offers.map((offer, i) => {
     return (
-      <OfferItem key={i} propKey={i} offer={offer} />
+      <OffersItem key={i} propKey={i} offer={offer} />
     )
   })
 }

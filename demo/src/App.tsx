@@ -4,6 +4,7 @@ import Layout from "./components/Layout";
 import Offers from "./components/Offers"
 import Order from "./components/Order";
 import Customer from "./components/Customer"
+import Offer from './components/Offer'
 
 const App = () => {
   return (
@@ -16,7 +17,8 @@ const App = () => {
             <Tab>Customer</Tab>
             <Tab>Addressee</Tab>
             <Tab>Offers</Tab>
-            <Tab>Order</Tab>
+            <Tab>Check offer</Tab>
+            <Tab>Check order</Tab>
           </TabList>
 
           <TabPanels>
@@ -33,6 +35,10 @@ const App = () => {
               <Heading as="h3">Offers</Heading>
               <Divider />
               <Offers />
+            </TabPanel>
+            <TabPanel>
+              <p>Check the offer</p>
+              <Offer />
             </TabPanel>
             <TabPanel>
               <p>Check the order</p>

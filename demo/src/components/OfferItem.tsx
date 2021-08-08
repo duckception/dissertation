@@ -1,25 +1,24 @@
-import { ListItem } from "@chakra-ui/react";
-import { OffersOffer } from "../hooks/offers";
+import { Text } from '@chakra-ui/react'
+import { utils } from 'ethers'
+import { Offer } from '../models/offer'
 
 interface OfferItemProps {
-  propKey: number
-  offer: OffersOffer
+  offer: Offer
 }
 
-function parseOfferStatus(status: number) {
-  const statuses = [
-    "AVAILABLE",
-    "ACCEPTED",
-    "CANCELED"
-  ]
-
-  return statuses[status]
-}
-
-export default function OfferItem(props: OfferItemProps ) {
+export default function OfferItem(props: OfferItemProps) {
+  const offer = props.offer
   return (
-    <ListItem key={props.propKey} fontSize={14}>
-      <b>[{parseOfferStatus(props.offer.offerStatus)}]</b>{"\t\t\t\t" + props.offer.offerHash}
-    </ListItem>
-  );
+    <>
+      <Text><b>Nonce:</b> {offer.nonce.toString()}</Text>
+      <Text><b>Customer address:</b> {offer.customerAddress}</Text>
+      <Text><b>Addressee address:</b> {offer.addresseeAddress}</Text>
+      <Text><b>Pickup address:</b> {utils.parseBytes32String(offer.pickupAddress)}</Text>
+      <Text><b>Delivery address:</b> {utils.parseBytes32String(offer.deliveryAddress)}</Text>
+      <Text><b>Delivery time: </b> {offer.deliveryTime.toNumber() / 3600}h</Text>
+      <Text><b>Token address: </b> {offer.tokenAddress}</Text>
+      <Text><b>Reward: </b> {utils.formatEther(offer.reward)} tokens</Text>
+      <Text><b>Collateral: </b> {utils.formatEther(offer.collateral)} tokens</Text>
+    </>
+  )
 }
