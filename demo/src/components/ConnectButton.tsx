@@ -1,11 +1,13 @@
 import { Box, Button, Text } from '@chakra-ui/react'
-import { useEtherBalance, useEthers } from '@usedapp/core'
+import { useEtherBalance, useEthers, useTokenBalance } from '@usedapp/core'
 import { formatEther } from '@ethersproject/units'
 import Identicon from './Identicon'
+import { ERC20_TOKEN_ADDRESS } from '../constants'
 
 export default function ConnectButton() {
   const { activateBrowserWallet, account } = useEthers()
   const etherBalance = useEtherBalance(account)
+  const daiBalance = useTokenBalance(ERC20_TOKEN_ADDRESS, account)
 
   function handleConnectWallet() {
     activateBrowserWallet()
@@ -20,8 +22,11 @@ export default function ConnectButton() {
       py='0'
     >
       <Box px='3'>
-        <Text color='white' fontSize='md'>
+        <Text color='white' fontSize='sm'>
           {etherBalance && parseFloat(formatEther(etherBalance)).toFixed(3)} ETH
+        </Text>
+        <Text color='white' fontSize='sm'>
+          {daiBalance && parseFloat(formatEther(daiBalance)).toFixed(3)} DAI
         </Text>
       </Box>
       <Button
