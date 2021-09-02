@@ -4,3 +4,5 @@ dist
 cache
 yarn-error.log
 examples/geth-data/geth
+secrets
+.idea
