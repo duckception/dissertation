@@ -3047,16 +3047,17 @@
     "@typescript-eslint/types" "4.15.2"
     eslint-visitor-keys "^2.0.0"
 
-"@usedapp/core@^0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@usedapp/core/-/core-0.4.2.tgz#90fbe0cffd355fba6dac82c0bc64a14b196711ae"
-  integrity sha512-Fwzv3GFX5LP5E79v0okkjSXHFnLVbN1bEdRBm6roSsbyTcX2oAmLJXsvZ8TDDZwgBmcD3n+Mc7UYzWTb8O2Z0g==
+"@usedapp/core@^0.4.8":
+  version "0.4.8"
+  resolved "https://registry.yarnpkg.com/@usedapp/core/-/core-0.4.8.tgz#5ade358c89d6b99bf21e2dc5d4b611a9249c02e4"
+  integrity sha512-Ou3sd+RdxBy+AcoIkLxKZbu9oN3tz+WHOjcyr6uPRK+yn64dwB3OVYfktcwuljUUcCqk6HEClcRzI5lHVLesaA==
   dependencies:
     "@types/react" "17.0.1"
     "@web3-react/core" "6.1.1"
     "@web3-react/injected-connector" "6.0.7"
     "@web3-react/network-connector" "6.1.5"
     ethers "5.4.1"
+    lodash.merge "^4.6.2"
     nanoid "3.1.22"
 
 "@web3-react/abstract-connector@^6.0.7":
@@ -8202,6 +8203,11 @@ lodash.memoize@^4.1.2:
   version "4.1.2"
   resolved "https://registry.yarnpkg.com/lodash.memoize/-/lodash.memoize-4.1.2.tgz#bcc6c49a42a2840ed997f323eada5ecd182e0bfe"
   integrity sha1-vMbEmkKihA7Zl/Mj6tpezRguC/4=
+
+lodash.merge@^4.6.2:
+  version "4.6.2"
+  resolved "https://registry.yarnpkg.com/lodash.merge/-/lodash.merge-4.6.2.tgz#558aa53b43b661e1925a0afdfa36a9a1085fe57a"
+  integrity sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==
 
 lodash.mergewith@4.6.2:
   version "4.6.2"
